@@ -13,7 +13,8 @@
   Used to control outputs by inputs and provide a REST API like over network to that system.
   
   Created 8 Oct 2019
-  by Maciej
+  by Maciej 
+  maciej.poszywak@gmail.com
 
 */
 
@@ -45,6 +46,9 @@
 #define EEPROM_IDX_REG      2  // length 1
 #define EEPROM_IDX_RASPYIP  3  // length 6
 #define EEPROM_IDX_NEXT     9
+
+#define IN_PINS  2
+#define OUT_PINS 2
 
 // various global variables
 byte mac[] = {
@@ -82,38 +86,63 @@ IPAddress iotGwIP;
 /* stores value how many seconds ago last heartbeat was received */
 byte lastHeartbeat = 0;
 
+/* holds information if the iot-hub is connected to the iot-gw */
+bool isConnected = false;
+
+/* variable to indicate the DHCP failure at the boot. If DHCP failed
+ *  at boot then there is no sense in re-trying every 1 sec as it will block
+ *  the Hub for at least one second rendering it unresponsive. 
+ *  -- Workaround: reboot the Hub once Connctivity/DHCP server is fixed. */
+bool DHCPFailed = false;
+
 /* variable used to track if everySec() has been already executed this second */
-//bool everySec = false;
 byte oldSec = 0;
 
-// the setup function runs once when you press reset (CONTROLLINO RST button) or connect the CONTROLLINO to the PC
-void setup() {
-  // initialize all used digital output pins as outputs
-  pinMode(CONTROLLINO_D0, OUTPUT);
-  pinMode(CONTROLLINO_D1, OUTPUT);  // note that we are using CONTROLLINO aliases for the digital outputs
-  pinMode(CONTROLLINO_D2, OUTPUT);
-  pinMode(CONTROLLINO_D3, OUTPUT);  // the alias is always like CONTROLLINO_
-  pinMode(CONTROLLINO_D4, OUTPUT);  // and the digital output label as you can see at the CONTROLLINO device
-  pinMode(CONTROLLINO_D5, OUTPUT);  // next to the digital output screw terminal
-  pinMode(CONTROLLINO_D6, OUTPUT);
-  pinMode(CONTROLLINO_D7, OUTPUT);
-  pinMode(CONTROLLINO_A0, INPUT);
-  Serial.begin(9600);
-  while (!Serial);
-  Serial.flush();
+/* The input pin array */
+byte digitIN[IN_PINS] = { CONTROLLINO_A0, CONTROLLINO_A1 };
 
-  Serial.println("Setup init!");
-  if (Ethernet.linkStatus() == LinkOFF) {
-    Serial.println("Ethernet cable disconnected");
+/* The output pin array */
+byte digitOUT[OUT_PINS] = { CONTROLLINO_D0, CONTROLLINO_D1 };
+
+/* The input pin devID array */
+byte digitINdevID[IN_PINS] = { 10, 11 };
+
+/* the output pin devID array */
+byte digitOUTdevID[OUT_PINS] = { 1, 2 };
+
+/* pins states variables */
+byte digitINState[IN_PINS];
+bool digitINPressed[IN_PINS];
+byte digitOUTState[OUT_PINS];
+
+/* value to control when to print the measurement report */
+bool measure;
+/*
+ * -----------------
+ * ---   Setup   ---
+ * -----------------
+ */
+void setup() {
+  /* initialize all used digital output pins as outputs */
+  for (int i = 0; i < IN_PINS; i++) {
+    pinMode(digitIN[i], INPUT);
+    digitINState[i] = LOW;
+    digitINPressed[i] = false;
   }
-  
+    for (int i = 0; i < OUT_PINS; i++) {
+    pinMode(digitOUT[i], OUTPUT);
+    digitOUTState[i] = LOW;
+  }
+
+  /* initialize serial interface */
+  Serial.begin(9600);
+  Serial.println("Setup init!");
+
+  /* initialize Ethernet */
   if (Ethernet.begin(mac) == 0) {
-    Serial.println("Failed to configure Ethernet using DHCP");
-    if (Ethernet.hardwareStatus() == EthernetNoHardware) {
-      Serial.println(F("Ethernet shield was not found."));
-    } else if (Ethernet.linkStatus() == LinkOFF) {
-      Serial.println(F("Ethernet cable is not connected."));
-    }
+    Serial.println(F("Failed to configure Ethernet using DHCP"));
+    isConnected = false;
+    DHCPFailed = true; // mark that the DHCP failed at boot
   } else { /* Ethernet initialization succesfull */
     Serial.println(F("NIC initialized. Ethernet cable connected."));
     Serial.print("My IP address: ");
@@ -122,11 +151,15 @@ void setup() {
     UDP.beginMulticast(mip, ARiF_BEACON_PORT);
     ARiFServer.begin();
   }
+
+  /* initialize RTC, no need to do that, Controllino should survive 2 weeks on internal battery */
   Serial.println("initializing RTC clock... ");
   Controllino_RTC_init(0);
   //Controllino_SetTimeDate(16,2,10,19,23,54,45);
 
+  /* initialize multicast socket for sending beacons */
   UDP.beginMulticast(mip, ARiF_BEACON_PORT);
+  
   /* get the registration data from EEPROM */
   isRegistered = (bool) EEPROM.read(EEPROM_IDX_REG);
   if (isRegistered) {
@@ -140,7 +173,7 @@ void setup() {
     raspyID = EEPROM.read(EEPROM_IDX_RASPYID);
     Serial.println(raspyID);
   } else {
-    Serial.println("Arduino not registered before.");
+    Serial.println("Not registered within any iot-gw");
   }
 
   /* uncomment below code to clear the registration bit in the the EEPROM manually */
@@ -150,40 +183,45 @@ void setup() {
   Serial.println("Setup complete!");
 }
 
-int A0_state = 0;
-int A0_pressed = 0;
-int D0_state = 0;
-bool measure;
-// the loop function runs over and over again forever
+/*
+ * -----------------
+ * --- Main Loop ---
+ * -----------------
+ */
 void loop() {
 
   /* execute every second */
   everySec();
-  
+
+  /* -- measurement code start -- */
   measure = false;
   TCCR1A = 0;
   TCCR1B = 1;
+  /* -- measurement code end -- */
 
   uint16_t start = TCNT1;
-  A0_state = digitalRead(CONTROLLINO_A0);
-  if (A0_state == 1) {
-    A0_pressed = 1;
-    delay(10); // this delay here was placed in order for the press button result to be predictable
-  } else {
-    if (A0_pressed) {
-      if (D0_state) {
-        digitalWrite(CONTROLLINO_D0, LOW);
-        sendDeviceStatus(1, false);
-        D0_state = 0;
-      } else {
-        digitalWrite(CONTROLLINO_D0, HIGH);
-        sendDeviceStatus(1, true);
-        measure = true;
-        D0_state = 1;
+  for (int i = 0; i < IN_PINS; i++) { 
+    digitINState[i] = digitalRead(digitIN[i]);
+    if (digitINState[i] == 1) {
+      digitINPressed[i] = true;
+      delay(10); // this delay here was placed in order for the press button result to be predictable
+    } else {
+      if (digitINPressed[i]) {
+        if (digitOUTState[i] == HIGH) {
+          digitalWrite(digitOUT[i], LOW);
+          sendDeviceStatus(digitOUTdevID[i], false);
+          digitOUTState[i] = 0;
+        } else {
+          digitalWrite(digitOUT[i], HIGH);
+          sendDeviceStatus(digitOUTdevID[i], true);
+          measure = true;
+          digitOUTState[i] = 1;
+        }
       }
+      digitINPressed[i] = false;
     }
-    A0_pressed = 0;
   }
+  
 
   /* handle here all Beacon operations and decisions */
   sendBeacon();
@@ -198,6 +236,8 @@ void loop() {
     measure = true;
     
   }
+
+  /* -- measurement code start -- */
   uint16_t finish = TCNT1;
   uint16_t overhead = 8;
   uint16_t cycles = finish - start - overhead;
@@ -205,11 +245,22 @@ void loop() {
     Serial.print("cycles: ");
     Serial.println(cycles);
   }
+  /* -- measurement code end -- */
 }
 
+/*
+ * -----------------
+ * --- Functions ---
+ * -----------------
+ */
+
+/* 
+ *  Handle the incoming HTTP connection.
+ */
 char* handleARiFClient(EthernetClient cl) {
   char buff[ARiF_HTTP_BUFF];
   int index = 0;
+  byte devID;
   while (cl.available()) {
     char c = cl.read();
     //Serial.print(c);
@@ -219,13 +270,18 @@ char* handleARiFClient(EthernetClient cl) {
   }
   switch (getValue(buff, CMD)) {
     case CMD_HEARTBEAT:
+      checkIotGwIP(cl.remoteIP());
       cl.println(F(HTTP_200_OK)); /* write 200 OK */
       cl.stop();                  /* send */
       lastHeartbeat = 0;          /* reset the heartbeat timer */
+      if (!isConnected) {
+        isConnected = true;
+        sendDeviceStatusAll();
+      }
       break;
     case CMD_REGISTER:
       Serial.println("register received");
-      //if (!isRegistered) {
+      //if (!isRegistered) { // this is commented out to allow the hub to "over-register"
         ardID = getValue(buff, ARDID);
         EEPROM.write(EEPROM_IDX_ARDID, ardID);
         raspyID = getValue(buff, RASPYID);
@@ -240,20 +296,22 @@ char* handleARiFClient(EthernetClient cl) {
       //}
       break;
     case CMD_LIGHTON:
-        digitalWrite(CONTROLLINO_D0, HIGH);
+        devID = getValue(buff, DEVID);
+        digitalWrite(digitOUT[getDigitOUTFromDevID(devID)], HIGH);
         cl.println(F(HTTP_200_OK));
         cl.println();
         cl.stop();
-        sendDeviceStatus(1, true);
-        D0_state = 1;
+        sendDeviceStatus(devID, true);
+        digitOUTState[getDigitOUTFromDevID(devID)] = HIGH;
       break;
     case CMD_LIGHTOFF:
-        digitalWrite(CONTROLLINO_D0, LOW);
+        devID = getValue(buff, DEVID);
+        digitalWrite(digitOUT[getDigitOUTFromDevID(devID)], LOW);
         cl.println(F(HTTP_200_OK));
         cl.println();
         cl.stop();
-        sendDeviceStatus(1, false);
-        D0_state = 0;
+        sendDeviceStatus(devID, false);
+        digitOUTState[getDigitOUTFromDevID(devID)] = LOW;
       break;
     case CMD_UNKNOWN:
         cl.println(F(HTTP_500_Error));
@@ -280,6 +338,7 @@ void sendBeacon() {
         UDP.write(beacon);
         UDP.endPacket();    
         beaconSent = true;
+        isConnected = false; // Update the status of the iot-hub <-> iot-gw connection
        }
     } else {
      beaconSent = false;
@@ -316,16 +375,23 @@ int getValue(char *buff, int value) {
 /* execute code every second */
 void everySec() {
   int sec = Controllino_GetSecond();
+  byte DHCPResult;
   //Serial.println(sec);
   //Serial.println(oldSec);
   if (sec != oldSec) {
     oldSec = sec;
-    lastHeartbeat++;
+    lastHeartbeat++;    // << code to be executed every second goes here
+    if (!DHCPFailed) {
+      DHCPResult = Ethernet.maintain(); // call this func once per sec for DHCP lease renewal
+      if (DHCPResult == 1 || DHCPResult == 3)
+        DHCPFailed = true;
+    }
   }
 }
 
-/* send device status to the iotGW */
-void sendDeviceStatus(int devID, bool devStatus) {
+/* send device status to the iot-gw */
+void sendDeviceStatus(byte devID, bool devStatus) {
+  if (!isConnected) return;  // exit function if the link is dead;
   if (ARiFClient.connect(iotGwIP, ARiF_HTTP_PORT)) {
     Serial.print("connected to "); // to be removed 
     Serial.println(ARiFClient.remoteIP()); // to be removed
@@ -356,11 +422,44 @@ void sendDeviceStatus(int devID, bool devStatus) {
     ARiFClient.println("Connection: close");
     ARiFClient.println();
   } else {
-    Serial.print("Problem with connecting");
+    Serial.println("Problem with connecting");
   }
 }
 
+/* send Status of all digitOUT pins */
+void sendDeviceStatusAll() {
+  for (int i = 0; i < OUT_PINS; i++) {
+    sendDeviceStatus(digitOUTdevID[i], digitOUTState[i]);
+  }
+}
 
-/* End of the example. Visit us at https://controllino.biz/ or contact us at info@controllino.biz if you have any questions or troubles. */
+/* function to get the digitIN index based on devID */
+byte getDigitINFromDevID(byte devID) {
+  for (int i = 0; i < IN_PINS; i++) {
+    if (digitINdevID[i] == devID) {
+      return i;
+    }
+  }
+}
 
-/* 2016-12-13: The sketch was successfully tested with Arduino 1.6.13, Controllino Library 1.0.0 and CONTROLLINO MINI, MAXI and MEGA. */
+/* function to get the digitOUT index based on devID */
+byte getDigitOUTFromDevID(byte devID) {
+  for (int i = 0; i < OUT_PINS; i++) {
+    if (digitOUTdevID[i] == devID) {
+      return i;
+    }
+  }
+}
+
+/* check if the IP address is the same as the one save in iotGwIP
+   if it is not save the new IP into EEPROM*/
+bool checkIotGwIP(IPAddress ip) {
+  if (iotGwIP == ip) {
+    return true;
+  } else {
+    iotGwIP = ip;
+    EEPROM.put(EEPROM_IDX_RASPYIP, iotGwIP);
+    Serial.println("IP changed. Writing to EEPROM");
+    return false;
+  }
+}
