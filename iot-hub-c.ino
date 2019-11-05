@@ -47,8 +47,8 @@
 #define EEPROM_IDX_RASPYIP  3  // length 6
 #define EEPROM_IDX_NEXT     9
 
-#define IN_PINS  2
-#define OUT_PINS 2
+#define IN_PINS  19
+#define OUT_PINS 19
 
 // various global variables
 byte mac[] = {
@@ -99,10 +99,46 @@ bool DHCPFailed = false;
 byte oldSec = 0;
 
 /* The input pin array */
-byte digitIN[IN_PINS] = { CONTROLLINO_A0, CONTROLLINO_A1 };
+byte digitIN[IN_PINS] =   { CONTROLLINO_A0, 
+                            CONTROLLINO_A1, 
+                            CONTROLLINO_A2,
+                            CONTROLLINO_A3,
+                            CONTROLLINO_A4,
+                            CONTROLLINO_A5,
+                            CONTROLLINO_A6,
+                            CONTROLLINO_A7,
+                            CONTROLLINO_A8,
+                            CONTROLLINO_A9,
+                            CONTROLLINO_A10,
+                            CONTROLLINO_A11,
+                            CONTROLLINO_A12,
+                            CONTROLLINO_A13,
+                            CONTROLLINO_A14,
+                            CONTROLLINO_A15,
+                            CONTROLLINO_I16,
+                            CONTROLLINO_I17,
+                            CONTROLLINO_I18};
 
 /* The output pin array */
-byte digitOUT[OUT_PINS] = { CONTROLLINO_D0, CONTROLLINO_D1 };
+byte digitOUT[OUT_PINS] = { CONTROLLINO_D0, 
+                            CONTROLLINO_D1,
+                            CONTROLLINO_D2,
+                            CONTROLLINO_D3,
+                            CONTROLLINO_D4,
+                            CONTROLLINO_D5,
+                            CONTROLLINO_D6,
+                            CONTROLLINO_D7,
+                            CONTROLLINO_D8,
+                            CONTROLLINO_D9,
+                            CONTROLLINO_D10,
+                            CONTROLLINO_D11,
+                            CONTROLLINO_D12,
+                            CONTROLLINO_D13,
+                            CONTROLLINO_D14,
+                            CONTROLLINO_D15,
+                            CONTROLLINO_D16,
+                            CONTROLLINO_D17,
+                            CONTROLLINO_D18};
 
 /* The input pin devID array */
 byte digitINdevID[IN_PINS] = { 10, 11 };
