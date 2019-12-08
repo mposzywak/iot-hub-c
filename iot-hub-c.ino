@@ -6,6 +6,8 @@
 #include <avr/pgmspace.h>
 #include <Controllino.h>
 #include <EEPROM.h>
+#include "Shade.h"
+#include "ARiF.h"
 
 /*
   CONTROLLINO - smarthouse test, Version 01.00
@@ -41,19 +43,56 @@
 #define CMD_LIGHTOFF  3
 #define CMD_UNKNOWN   10
 
+/* indexes for EEPROM information holding */
 #define EEPROM_IDX_ARDID    0  // length 1
 #define EEPROM_IDX_RASPYID  1  // length 1
 #define EEPROM_IDX_REG      2  // length 1
 #define EEPROM_IDX_RASPYIP  3  // length 6
 #define EEPROM_IDX_NEXT     9
 
-#define IN_PINS  19
-#define OUT_PINS 19
+/* number of pins in/out TODO: need to convert into MEGA/MAXI */
+#if defined(CONTROLLINO_MEGA)
+#define IN_PINS  21
+#define OUT_PINS 21
+#define SHADES   10
+#elif defined(CONTROLLINO_MAXI) 
+#define IN_PINS  12
+#define OUT_PINS 12
+#define SHADES   6
+#endif
 
-// various global variables
-byte mac[] = {
-  0x00, 0xAA, 0xBB, 0xC9, 0xD2, 0x49
-};
+/* functional modes of the entire device */
+#define FUNC_LIGHTS 0
+#define FUNC_SHADES 1
+
+/*
+ * ----------------
+ * --- Settings ---
+ * ----------------
+ */
+
+/* variable controlling if the relays are set to NC or NO
+ *  NC - Normally Closed - the digitOUT is by default in LOW state, LightON -> HIGH state (true)
+ *  NO - Normally Open   - the digitOUT is by default in HIGH state, LightON -> LOW state (false)
+ */
+bool relaysNC = true;
+
+/* This value is set to:
+ * LIGHTS - where every digitIN toggled changes the state of its corresponding digitOUT (1-to-1 mapping)
+ * SHADES - the devices are coupled in 4 for one shade device (separate controls for UP and DOWN directions).
+ *          Each digitIN enables the corresponding digitOUT, but at the same time disables the paired digitOUT. 
+ *          Additional default timer is implemented.
+ */
+byte funcMode = FUNC_SHADES;
+
+/* MAC address used for initiall boot */
+byte mac[] = { 0x00, 0xAA, 0xBB, 0xC6, 0xA5, 0x58 };
+
+/*
+ * ------------------------
+ * --- Global Variables ---
+ * ------------------------
+ */
 
 /* UDP socket object for sending beacons */
 EthernetUDP UDP;
@@ -98,6 +137,10 @@ bool DHCPFailed = false;
 /* variable used to track if everySec() has been already executed this second */
 byte oldSec = 0;
 
+/* default shade timer (in seconds) */
+byte shadeTimer = 10;
+
+#if defined(CONTROLLINO_MEGA)
 /* The input pin array */
 byte digitIN[IN_PINS] =   { CONTROLLINO_A0, 
                             CONTROLLINO_A1, 
@@ -117,7 +160,9 @@ byte digitIN[IN_PINS] =   { CONTROLLINO_A0,
                             CONTROLLINO_A15,
                             CONTROLLINO_I16,
                             CONTROLLINO_I17,
-                            CONTROLLINO_I18};
+                            CONTROLLINO_I18,
+                            CONTROLLINO_IN0,
+                            CONTROLLINO_IN1};
 
 /* The output pin array */
 byte digitOUT[OUT_PINS] = { CONTROLLINO_D0, 
@@ -138,18 +183,72 @@ byte digitOUT[OUT_PINS] = { CONTROLLINO_D0,
                             CONTROLLINO_D15,
                             CONTROLLINO_D16,
                             CONTROLLINO_D17,
-                            CONTROLLINO_D18};
+                            CONTROLLINO_D18,
+                            CONTROLLINO_D19,
+                            CONTROLLINO_D20};
 
 /* The input pin devID array */
-byte digitINdevID[IN_PINS] = { 10, 11 };
+byte digitINdevID[IN_PINS] = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30 };
 
 /* the output pin devID array */
-byte digitOUTdevID[OUT_PINS] = { 1, 2 };
+byte digitOUTdevID[OUT_PINS] = { 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70 };
+
+/* the shadeID array */
+byte shadeIDs[SHADES] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+
+#elif defined(CONTROLLINO_MAXI) 
+byte digitIN[IN_PINS] =   { CONTROLLINO_A0, 
+                            CONTROLLINO_A1, 
+                            CONTROLLINO_A2,
+                            CONTROLLINO_A3,
+                            CONTROLLINO_A4,
+                            CONTROLLINO_A5,
+                            CONTROLLINO_A6,
+                            CONTROLLINO_A7,
+                            CONTROLLINO_A8,
+                            CONTROLLINO_A9,
+                            CONTROLLINO_IN0,
+                            CONTROLLINO_IN1};
+
+/* The output pin array */
+byte digitOUT[OUT_PINS] = { CONTROLLINO_D0, 
+                            CONTROLLINO_D1,
+                            CONTROLLINO_D2,
+                            CONTROLLINO_D3,
+                            CONTROLLINO_D4,
+                            CONTROLLINO_D5,
+                            CONTROLLINO_D6,
+                            CONTROLLINO_D7,
+                            CONTROLLINO_D8,
+                            CONTROLLINO_D9,
+                            CONTROLLINO_D10,
+                            CONTROLLINO_D11};
+                            
+/* The input pin devID array */
+byte digitINdevID[IN_PINS] = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 };
+
+/* the output pin devID array */
+byte digitOUTdevID[OUT_PINS] = { 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61 };
+
+/* the shadeID array */
+byte shadeIDs[SHADES] = { 1, 2, 3, 4, 5, 6 };
+
+#endif
+
+/* variables representing the states */
+byte low  = LOW;
+byte high = HIGH;
 
 /* pins states variables */
 byte digitINState[IN_PINS];
 bool digitINPressed[IN_PINS];
 byte digitOUTState[OUT_PINS];
+
+/* initialize the shades */
+Shade shades[SHADES];
+
+
+//Shade shadeDevs[1](2);
 
 /* value to control when to print the measurement report */
 bool measure;
@@ -159,28 +258,46 @@ bool measure;
  * -----------------
  */
 void setup() {
-  /* initialize all used digital output pins as outputs */
-  for (int i = 0; i < IN_PINS; i++) {
-    pinMode(digitIN[i], INPUT);
-    digitINState[i] = LOW;
-    digitINPressed[i] = false;
-  }
-    for (int i = 0; i < OUT_PINS; i++) {
-    pinMode(digitOUT[i], OUTPUT);
-    digitOUTState[i] = LOW;
-  }
 
   /* initialize serial interface */
   Serial.begin(9600);
   Serial.println("Setup init!");
 
+  /* adjust the high/low variables according to the set relay type */
+  Serial.print(F("Setting digitOUTs for operating with "));
+  if (!relaysNC) {
+    Serial.println("NO relays");
+    low = HIGH;
+    high = LOW;
+  } else {
+    Serial.println("NC relays");
+  }
+
+  ARiF.begin(VER_SHD_1);
+  
+  /* initialize all used digital output pins as outputs */
+  /*for (int i = 0; i < IN_PINS; i++) {
+    pinMode(digitIN[i], INPUT);
+    digitINState[i] = LOW;
+    digitINPressed[i] = false;
+  }
+  for (int i = 0; i < OUT_PINS; i++) {
+    pinMode(digitOUT[i], OUTPUT);
+    digitalWrite(digitOUT[i], low);
+    digitOUTState[i] = low;
+  }*/
+
+  for (int i = 0; i < SHADES; i++) {
+    shades[i].init(shadeIDs[i]);
+  }
+
   /* initialize Ethernet */
-  if (Ethernet.begin(mac) == 0) {
+  /*if (Ethernet.begin(mac) == 0) {
     Serial.println(F("Failed to configure Ethernet using DHCP"));
     isConnected = false;
     DHCPFailed = true; // mark that the DHCP failed at boot
   } else { /* Ethernet initialization succesfull */
-    Serial.println(F("NIC initialized. Ethernet cable connected."));
+  /*  Serial.println(F("NIC initialized. Ethernet cable connected."));
     Serial.print("My IP address: ");
     Serial.println(Ethernet.localIP());
     
@@ -191,10 +308,10 @@ void setup() {
   /* initialize RTC, no need to do that, Controllino should survive 2 weeks on internal battery */
   Serial.println("initializing RTC clock... ");
   Controllino_RTC_init(0);
-  //Controllino_SetTimeDate(16,2,10,19,23,54,45);
+  //Controllino_SetTimeDate(7,4,11,19,11,00,45);
 
   /* initialize multicast socket for sending beacons */
-  UDP.beginMulticast(mip, ARiF_BEACON_PORT);
+  //UDP.beginMulticast(mip, ARiF_BEACON_PORT);
   
   /* get the registration data from EEPROM */
   isRegistered = (bool) EEPROM.read(EEPROM_IDX_REG);
@@ -233,37 +350,60 @@ void loop() {
   measure = false;
   TCCR1A = 0;
   TCCR1B = 1;
+  uint16_t start = TCNT1;
   /* -- measurement code end -- */
 
-  uint16_t start = TCNT1;
-  for (int i = 0; i < IN_PINS; i++) { 
-    digitINState[i] = digitalRead(digitIN[i]);
-    if (digitINState[i] == 1) {
-      digitINPressed[i] = true;
-      delay(10); // this delay here was placed in order for the press button result to be predictable
+for (int i = 0; i < SHADES; i++) {
+  if (shades[i].isUpPressed()) {
+    if (shades[i].isMoving()) {
+      shades[i].stop();
     } else {
-      if (digitINPressed[i]) {
-        if (digitOUTState[i] == HIGH) {
-          digitalWrite(digitOUT[i], LOW);
-          sendDeviceStatus(digitOUTdevID[i], false);
-          digitOUTState[i] = 0;
-        } else {
-          digitalWrite(digitOUT[i], HIGH);
-          sendDeviceStatus(digitOUTdevID[i], true);
-          measure = true;
-          digitOUTState[i] = 1;
-        }
-      }
-      digitINPressed[i] = false;
+      shades[i].up();
     }
+    measure = true;
   }
-  
+
+  if (shades[i].isDownPressed()) {
+    if (shades[i].isMoving()) {
+      shades[i].stop();
+    } else {
+      shades[i].down();
+    }
+    measure = true;
+  }
+}
+
+
+  if (funcMode == FUNC_LIGHTS) {
+    for (int i = 0; i < IN_PINS; i++) { 
+      digitINState[i] = digitalRead(digitIN[i]);
+      if (digitINState[i] == HIGH) {
+        digitINPressed[i] = true;
+        delay(10); // this delay here was placed in order for the press button result to be predictable
+      } else {
+        if (digitINPressed[i]) {
+          /* EXECUTED ON BUTTON RELEASE - START */
+          if (digitOUTState[i] == high) {
+            digitalWrite(digitOUT[i], low);
+            sendDeviceStatus(digitOUTdevID[i], false);
+            digitOUTState[i] = low;
+          } else {
+            digitalWrite(digitOUT[i], high);
+            sendDeviceStatus(digitOUTdevID[i], true);
+            digitOUTState[i] = high;
+          }
+          /* EXECUTED ON BUTTON RELEASE - END */
+        }
+        digitINPressed[i] = false;
+      }
+    }
+  } 
 
   /* handle here all Beacon operations and decisions */
-  sendBeacon();
+  //sendBeacon();
 
   /* handle the incoming HTTP message over ARiF here */
-  EthernetClient client = ARiFServer.available();
+  /*EthernetClient client = ARiFServer.available();
   if (client) {
     Serial.print("HTTP Request received from: ");
     Serial.println(client.remoteIP());
@@ -289,6 +429,7 @@ void loop() {
  * --- Functions ---
  * -----------------
  */
+
 
 /* 
  *  Handle the incoming HTTP connection.
@@ -333,21 +474,21 @@ char* handleARiFClient(EthernetClient cl) {
       break;
     case CMD_LIGHTON:
         devID = getValue(buff, DEVID);
-        digitalWrite(digitOUT[getDigitOUTFromDevID(devID)], HIGH);
+        digitalWrite(digitOUT[getDigitOUTFromDevID(devID)], high);
         cl.println(F(HTTP_200_OK));
         cl.println();
         cl.stop();
         sendDeviceStatus(devID, true);
-        digitOUTState[getDigitOUTFromDevID(devID)] = HIGH;
+        digitOUTState[getDigitOUTFromDevID(devID)] = high;
       break;
     case CMD_LIGHTOFF:
         devID = getValue(buff, DEVID);
-        digitalWrite(digitOUT[getDigitOUTFromDevID(devID)], LOW);
+        digitalWrite(digitOUT[getDigitOUTFromDevID(devID)], low);
         cl.println(F(HTTP_200_OK));
         cl.println();
         cl.stop();
         sendDeviceStatus(devID, false);
-        digitOUTState[getDigitOUTFromDevID(devID)] = LOW;
+        digitOUTState[getDigitOUTFromDevID(devID)] = low;
       break;
     case CMD_UNKNOWN:
         cl.println(F(HTTP_500_Error));
@@ -416,12 +557,14 @@ void everySec() {
   //Serial.println(oldSec);
   if (sec != oldSec) {
     oldSec = sec;
-    lastHeartbeat++;    // << code to be executed every second goes here
+    /* CODE EXECUTED EVERY SECOND - START */
+    lastHeartbeat++;
     if (!DHCPFailed) {
       DHCPResult = Ethernet.maintain(); // call this func once per sec for DHCP lease renewal
       if (DHCPResult == 1 || DHCPResult == 3)
         DHCPFailed = true;
     }
+    /* CODE EXECUTED EVERY SECOND - END */
   }
 }
 
