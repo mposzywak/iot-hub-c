@@ -8,6 +8,7 @@
 #include <EEPROM.h>
 #include "Shade.h"
 #include "ARiF.h"
+#include "Settings.h"
 
 /*
   CONTROLLINO - smarthouse test, Version 01.00
@@ -115,9 +116,6 @@ byte raspyID = 0;
 
 /* holds information if this arduino is registered */
 bool isRegistered = false;
-
-/* holds information if the raspy/iot-gw timed out on heartbeat */
-bool heartbeatTimedOut = true;
 
 /* holds the IP of the Raspy/iot-gw */
 IPAddress iotGwIP;
@@ -263,55 +261,15 @@ void setup() {
   Serial.begin(9600);
   Serial.println("Setup init!");
 
-  /* adjust the high/low variables according to the set relay type */
-  Serial.print(F("Setting digitOUTs for operating with "));
-  if (!relaysNC) {
-    Serial.println("NO relays");
-    low = HIGH;
-    high = LOW;
-  } else {
-    Serial.println("NC relays");
-  }
-
-  ARiF.begin(VER_SHD_1);
-  
-  /* initialize all used digital output pins as outputs */
-  /*for (int i = 0; i < IN_PINS; i++) {
-    pinMode(digitIN[i], INPUT);
-    digitINState[i] = LOW;
-    digitINPressed[i] = false;
-  }
-  for (int i = 0; i < OUT_PINS; i++) {
-    pinMode(digitOUT[i], OUTPUT);
-    digitalWrite(digitOUT[i], low);
-    digitOUTState[i] = low;
-  }*/
-
+  /* initialize the shades */
   for (int i = 0; i < SHADES; i++) {
     shades[i].init(shadeIDs[i]);
-  }
-
-  /* initialize Ethernet */
-  /*if (Ethernet.begin(mac) == 0) {
-    Serial.println(F("Failed to configure Ethernet using DHCP"));
-    isConnected = false;
-    DHCPFailed = true; // mark that the DHCP failed at boot
-  } else { /* Ethernet initialization succesfull */
-  /*  Serial.println(F("NIC initialized. Ethernet cable connected."));
-    Serial.print("My IP address: ");
-    Serial.println(Ethernet.localIP());
-    
-    UDP.beginMulticast(mip, ARiF_BEACON_PORT);
-    ARiFServer.begin();
   }
 
   /* initialize RTC, no need to do that, Controllino should survive 2 weeks on internal battery */
   Serial.println("initializing RTC clock... ");
   Controllino_RTC_init(0);
   //Controllino_SetTimeDate(7,4,11,19,11,00,45);
-
-  /* initialize multicast socket for sending beacons */
-  //UDP.beginMulticast(mip, ARiF_BEACON_PORT);
   
   /* get the registration data from EEPROM */
   isRegistered = (bool) EEPROM.read(EEPROM_IDX_REG);
@@ -325,8 +283,10 @@ void setup() {
     Serial.print("RaspyID: ");
     raspyID = EEPROM.read(EEPROM_IDX_RASPYID);
     Serial.println(raspyID);
+    ARiF.begin(VER_SHD_1, mac, iotGwIP, ardID, raspyID);
   } else {
     Serial.println("Not registered within any iot-gw");
+    ARiF.begin(VER_SHD_1, mac);
   }
 
   /* uncomment below code to clear the registration bit in the the EEPROM manually */
@@ -357,8 +317,11 @@ for (int i = 0; i < SHADES; i++) {
   if (shades[i].isUpPressed()) {
     if (shades[i].isMoving()) {
       shades[i].stop();
+      ARiF.sendShadeStop(Settings::getShadeOutPinUp(i));
+      ARiF.sendShadeStop(Settings::getShadeOutPinDown(i));
     } else {
       shades[i].up();
+      ARiF.sendShadeUp(Settings::getShadeOutPinUp(i));
     }
     measure = true;
   }
@@ -366,14 +329,34 @@ for (int i = 0; i < SHADES; i++) {
   if (shades[i].isDownPressed()) {
     if (shades[i].isMoving()) {
       shades[i].stop();
+      ARiF.sendShadeStop(Settings::getShadeOutPinUp(i));
+      ARiF.sendShadeStop(Settings::getShadeOutPinDown(i));
     } else {
       shades[i].down();
+      ARiF.sendShadeDown(Settings::getShadeOutPinDown(i));
     }
     measure = true;
   }
 }
 
+switch (ARiF.update()) {
+  case U_NOTHING:
+    break;
+  case CMD_REGISTER:
+    Serial.println("Registered!");
+    break;
+  case CMD_SHADEPOS:
+    Serial.println("Shadepos received!");
+    break;
+  case CMD_SHADETILT:
+    Serial.println("Shadetilt received!");
+    break;
+  case U_CONNECTED:
+    Serial.println("Connected back!");
+    break;
+}
 
+/*
   if (funcMode == FUNC_LIGHTS) {
     for (int i = 0; i < IN_PINS; i++) { 
       digitINState[i] = digitalRead(digitIN[i]);
@@ -383,7 +366,7 @@ for (int i = 0; i < SHADES; i++) {
       } else {
         if (digitINPressed[i]) {
           /* EXECUTED ON BUTTON RELEASE - START */
-          if (digitOUTState[i] == high) {
+ /*         if (digitOUTState[i] == high) {
             digitalWrite(digitOUT[i], low);
             sendDeviceStatus(digitOUTdevID[i], false);
             digitOUTState[i] = low;
@@ -393,11 +376,11 @@ for (int i = 0; i < SHADES; i++) {
             digitOUTState[i] = high;
           }
           /* EXECUTED ON BUTTON RELEASE - END */
-        }
+ /*       }
         digitINPressed[i] = false;
       }
     }
-  } 
+  } */
 
   /* handle here all Beacon operations and decisions */
   //sendBeacon();

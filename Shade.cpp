@@ -86,10 +86,10 @@ void Shade::update() {
   if (sec != Shade::oldSec) {
     oldSec = sec;
     /* CODE EXECUTED EVERY SECOND - START */
-    Serial.print("ShadeID: ");
+    /*Serial.print("ShadeID: ");
     Serial.print(shadeID);
     Serial.print(" position: ");
-    Serial.println(position);
+    Serial.println(position);*/
     bool movingUp = this->isMovingUp();
     bool movingDown = this->isMovingDown();
     if (!synced) {
