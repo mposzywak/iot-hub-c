@@ -3,7 +3,11 @@
 #ifndef SHADE_H_
 #define SHADE_H_
 
+/* defines how many seconds does it take to move the entire shade from closed to open or vice-versa */
 #define DEFAULT_RANGE 16
+
+/* defines the number sections that the range is devided to. This means that by changing the range section the shade will report its position */
+#define DEFAULT_PARTS 4
 
 /*
  * Class for handling of the Shades. Each object represents one shade composed of 4 pins (2 inputs for both directions and 2 outputs for both directions)
@@ -40,7 +44,14 @@ class Shade {
     bool inPinUpPressed;
     bool inPinDownPressed;
 
+    /* contains true if the Shade has just been stopped. Upon reporting it is supposed to be set to false */
+    bool justStoppedVar;
+
     byte oldSec;
+
+    byte sections[DEFAULT_PARTS];
+
+    bool positionReported;
 
   public:
 
@@ -63,7 +74,7 @@ class Shade {
   bool isDownPressed();
 
   /* function to be executed on every loop. Updates timers */
-  void update();
+  byte update();
 
   /* starts shade up movement */
   void up();
@@ -76,10 +87,11 @@ class Shade {
 
   /* returns true if the shade is currently moving in either direction */
   bool isMoving();
-
   bool isMovingUp();
-
   bool isMovingDown();
+
+  /* returns true if the Shade has just stopped moveing and changes justStopped variable to false */
+  bool justStopped();
   
 };
 

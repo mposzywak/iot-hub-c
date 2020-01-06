@@ -245,9 +245,6 @@ byte digitOUTState[OUT_PINS];
 /* initialize the shades */
 Shade shades[SHADES];
 
-
-//Shade shadeDevs[1](2);
-
 /* value to control when to print the measurement report */
 bool measure;
 /*
@@ -314,14 +311,19 @@ void loop() {
   /* -- measurement code end -- */
 
 for (int i = 0; i < SHADES; i++) {
+  byte percent = shades[i].update();
+  if (percent <= 100) {
+    ARiF.sendShadePosition(shadeIDs[i], percent);
+  }
+    
+  
   if (shades[i].isUpPressed()) {
     if (shades[i].isMoving()) {
       shades[i].stop();
-      ARiF.sendShadeStop(Settings::getShadeOutPinUp(i));
-      ARiF.sendShadeStop(Settings::getShadeOutPinDown(i));
+      ARiF.sendShadeStop(shadeIDs[i]);
     } else {
       shades[i].up();
-      ARiF.sendShadeUp(Settings::getShadeOutPinUp(i));
+      ARiF.sendShadeUp(shadeIDs[i]);
     }
     measure = true;
   }
@@ -329,14 +331,19 @@ for (int i = 0; i < SHADES; i++) {
   if (shades[i].isDownPressed()) {
     if (shades[i].isMoving()) {
       shades[i].stop();
-      ARiF.sendShadeStop(Settings::getShadeOutPinUp(i));
-      ARiF.sendShadeStop(Settings::getShadeOutPinDown(i));
+      ARiF.sendShadeStop(shadeIDs[i]);
     } else {
       shades[i].down();
-      ARiF.sendShadeDown(Settings::getShadeOutPinDown(i));
+      ARiF.sendShadeDown(shadeIDs[i]);
     }
     measure = true;
   }
+  
+  if (shades[i].justStopped()) {
+    ARiF.sendShadeStop(shadeIDs[i]);
+  }
+
+  
 }
 
 switch (ARiF.update()) {

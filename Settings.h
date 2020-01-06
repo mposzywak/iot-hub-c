@@ -43,17 +43,13 @@ class Settings {
      *  NO - Normally Open   - the digitOUT is by default in HIGH state, LightON -> LOW state (false)
      */
     static const bool relaysNC = true;
-
     static bool getLow();
-
     static bool getHigh();
 
+    /* Get the Shade PINs based on the shade ID */
     static byte getShadeOutPinUp(byte shadeID);
-
     static byte getShadeInPinUp(byte shadeID);
-
     static byte getShadeOutPinDown(byte shadeID);
-
     static byte getShadeInPinDown(byte shadeID);
 };
 

@@ -38,7 +38,17 @@ void Shade::init(byte shadeID) {
   desiredPosition = 0;
   movementRange = DEFAULT_RANGE;
   synced = false;
+  justStoppedVar = false;
   oldSec = 0;
+
+  /* filling in the section borders with the border seconds of the movement range */
+  sections[0] = 0;
+  sections[DEFAULT_PARTS] = DEFAULT_RANGE;
+  for (int i = 1; i < DEFAULT_PARTS; i++) {
+    sections[i] = DEFAULT_RANGE / DEFAULT_PARTS * i;
+  }
+
+  positionReported = false;
 }
 
 bool Shade::isUpPressed() {
@@ -61,7 +71,6 @@ bool Shade::isUpPressed() {
 }
 
 bool Shade::isDownPressed() {
-  this->update();
   inPinDownState = digitalRead(inPinDown);
   if (inPinDownState == HIGH) { /* Button pressed and held */
     inPinDownPressed = true;
@@ -80,7 +89,7 @@ bool Shade::isDownPressed() {
   }
 }
 
-void Shade::update() {
+byte Shade::update() {
   int sec = Controllino_GetSecond();
 
   if (sec != Shade::oldSec) {
@@ -95,6 +104,7 @@ void Shade::update() {
     if (!synced) {
       if (movingUp && position > 0) {
         position--;
+        positionReported = false;
       } else if (movingUp && position == 0) {
         synced = true;
         this->stop();
@@ -102,6 +112,7 @@ void Shade::update() {
       }
       if (movingDown && position < movementRange) {
         position++;
+        positionReported = false;
       } else if (movingDown && position == movementRange) {
         synced = true;
         this->stop();
@@ -110,15 +121,36 @@ void Shade::update() {
     } else {
       if (movingUp && position > desiredPosition) {
         position--;
+        positionReported = false;
       } else if (movingUp && position == desiredPosition) {
         this->stop();
       }
       if (movingDown && position < desiredPosition) {
         position++;
+        positionReported = false;
       } else if (movingDown && position == desiredPosition) {
         this->stop();
       }
       
+    }
+
+    if (position == sections[0] && positionReported == false && synced) {
+      positionReported = true;
+      return 0;
+    } else if (position == sections[1] && positionReported == false && synced) {
+      positionReported = true;
+      return 25;
+    } else if (position == sections[2] && positionReported == false && synced) {
+      positionReported = true;
+      return 50;
+    } else if (position == sections[3] && positionReported == false && synced) {
+      positionReported = true;
+      return 75; 
+    } else if (position == sections[4] && positionReported == false && synced) {
+      positionReported = true;
+      return 100;
+    } else {
+        return 255;
     }
     /* CODE EXECUTED EVERY SECOND - END */
   }
@@ -151,6 +183,7 @@ void Shade::stop() {
   digitalWrite(outPinDown, Shade::low);
   outPinUpState = Shade::low;
   outPinDownState = Shade::low;
+  justStoppedVar = true;
 }
 
 bool Shade::isMoving() {
@@ -175,5 +208,13 @@ bool Shade::isMovingDown() {
   } else {
     return false;
   }
+}
 
+bool Shade::justStopped() {
+  if (justStoppedVar) {
+    justStoppedVar = false;
+    return true;
+  } else {
+    return false;
+  }
 }

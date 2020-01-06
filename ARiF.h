@@ -47,10 +47,20 @@
 #define CMD     3
 
 /* Shade status to control sendShadeStatus() CMD value */
-#define SS_MOVE   1
-#define SS_STOP   0
+#define VAL_MOVE_UP     2
+#define VAL_MOVE_DOWN   1
+#define VAL_STOPPED     0
+
+/* shade status dataType values */
+#define DT_DIRECTION 0
+#define DT_POSITION  1
+#define DT_TILT      2
 
 class ARiFClass {
+  typedef struct t  {
+    unsigned long tStart;
+    unsigned long tTimeout;
+  };
   private:
     /* holds the SW version which also can dictate what this particular modules will support, i. e. lights, shades, analog inputs etc.. */
     static byte version;
@@ -106,6 +116,15 @@ class ARiFClass {
     /* variable used to signal if the IP of the raspy has changed */
     static bool signalIPchange;
 
+    //Tasks and their Schedules.
+    static t t_func1;
+    static t t_func2;
+
+    static bool timeCheck(struct t *t);
+
+    static void timeRun(struct t *t);
+
+    
     /*
      * Functions
      */
@@ -119,8 +138,13 @@ class ARiFClass {
     /* return true if the raspy IP address is same as the old one*/
     static bool checkIotGwIP(IPAddress ip);
 
-    /* simple function sending shade status to the raspy */
-    static void sendShadeStatus(byte devID, byte status);
+    /* simple function sending shade status to the raspy 
+     * Where status is one of #defined values: 
+     * SS_MOVE_UP
+     * SS_MOVE_DOWN
+     * SS_STOPPED
+     */
+    static void sendShadeStatus(byte devID, byte dataType, byte value);
     
   public:
 
@@ -135,22 +159,41 @@ class ARiFClass {
     static byte begin(byte version, byte mac[]);
 
     /*  Function must be executed every loop. It updates all the timers and handles incoming ARiF messages 
-    returns - 0 - if no action need to be taken
-        1 - if this IQbutton has been registered (this means that the ardID, raspyID etc.. needs to be saved)
+    returns:
+        U_NOTHING - if no action need to be taken
+        CMD_REGISTER - if this IQbutton has been registered (this means that the ardID, raspyID etc.. needs to be saved)
           This means that the values resulting from registration must be asked using other methods and stored somewhere outside of this API
-        2 - if there is a timeout and raspy got disconnected
-        3 - if the raspy got connected back
-        4 - if the shade CMD was received
-        5 - if the light CMD was received (digitOUT)
+        U_DISCONNECTED - if there is a timeout and raspy got disconnected
+        U_CONNECTED - if the raspy got connected back
+        CMD_SHADEPOS - if the shade CMD indicating position was received
+        CMD_SHADETILT - if the shade CMD indicating tilt was received (digitOUT)
 
     */
     static byte update();
 
+    /* send the shade moving UP indication towards the raspy */
     static void sendShadeUp(byte devID);
 
+    /* send the shade moving DOWN indication towards the raspy */
     static void sendShadeDown(byte devID);
 
+    /* send the shade stopped indication towards the raspy */
     static void sendShadeStop(byte devID);
+
+    /* send the shade current position towards the raspy */
+    static void sendShadePosition(byte devID, byte position);
+
+    /* send the shade current tilt towards the raspy */
+    static void sendShadeTilt(byte devID, byte tilt);
+
+    /* get the currently assigned raspberry IP address */
+    static IPAddress getRaspyIP();
+
+    /* get the raspyID value of the raspy currently controlling this arduino */
+    static byte getRaspyID();
+
+    /* get the currently assigned ardID by the controlling raspy */
+    static byte getArdID();
 
 };
 

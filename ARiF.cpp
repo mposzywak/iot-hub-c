@@ -13,15 +13,16 @@ static IPAddress ARiFClass::mip(224, 1, 1, 1);
 static bool ARiFClass::isConnected = false;
 static EthernetServer ARiFClass::ARiFServer(ARiF_HTTP_PORT);
 static EthernetClient ARiFClass::ARiFClient;
-static byte ARiFClass::oldSec;
 static byte ARiFClass::lastDevID = 0;
 static bool ARiFClass::isRegistered;
 static bool ARiFClass::signalIPchange = false;
+static ARiFClass::t ARiFClass::t_func1 = {0, 1000 * ARiF_BEACON_INT}; /* for ARiF beacon interval */
+static ARiFClass::t ARiFClass::t_func2 = {0, 1000}; /* for everysecond on the DHCP checking */
+
 
 static byte ARiFClass::begin(byte version, byte mac[]) {
   ARiFClass::version = version;
   //ARiFClass::mac = mac;
-  oldSec = Controllino_GetSecond() - 1;
   /* initialize Ethernet */
   beginEthernet(mac);
   isRegistered = false;
@@ -34,7 +35,6 @@ static byte ARiFClass::begin(byte version, byte mac[], IPAddress raspyIP, byte a
   ARiFClass::raspyIP = raspyIP;
   ARiFClass::ardID = ardID;
   ARiFClass::raspyID = raspyID;
-  oldSec = Controllino_GetSecond() - 1;
   beginEthernet(mac);
   isRegistered = true;
   return 0;
@@ -42,9 +42,8 @@ static byte ARiFClass::begin(byte version, byte mac[], IPAddress raspyIP, byte a
 
 static byte ARiFClass::update() {
   char beacon[ARiF_BEACON_LENGTH];
-  int sec = Controllino_GetSecond();
   if (lastHeartbeat > 4) {
-    if (sec % ARiF_BEACON_INT == 0) {
+    if (timeCheck(&t_func1)) {
       if (beaconSent == false) {
         snprintf(beacon, ARiF_BEACON_LENGTH, ARiF_BEACON_STRING, ardID);
         Serial.print("Sending beacon: ");
@@ -55,13 +54,13 @@ static byte ARiFClass::update() {
         beaconSent = true;
         isConnected = false; // Update the status of the iot-hub <-> iot-gw connection
       }
+      timeRun(&t_func1);
     } else {
       beaconSent = false;
     }
   }
   byte DHCPResult;
-  if (sec != oldSec) {
-    oldSec = sec;
+  if (timeCheck(&t_func2)) {
     /* CODE EXECUTED EVERY SECOND - START */
     lastHeartbeat++;
     if (!DHCPFailed) {
@@ -70,6 +69,7 @@ static byte ARiFClass::update() {
         DHCPFailed = true;
     }
     /* CODE EXECUTED EVERY SECOND - END */
+    timeRun(&t_func2);
   }
 
   EthernetClient client = ARiFServer.available();
@@ -86,8 +86,7 @@ static byte ARiFClass::update() {
       index++;
       if (c == '/n' or c == '/r' or index >= ARiF_HTTP_BUFF) break;
     }
-      Serial.print("cRaspy IP: "); // to be removed 
-  Serial.println(ARiFClass::raspyIP); // to be removed
+
     switch (getValue(buff, CMD)) {
       case CMD_HEARTBEAT:      
         client.println(F(HTTP_200_OK)); /* write 200 OK */
@@ -103,7 +102,7 @@ static byte ARiFClass::update() {
         break;
       case CMD_REGISTER:
         Serial.println("register received");
-        //if (!isRegistered) { // this is commented out to allow the hub to "over-register"
+        //if (!isRegistered) { // this is commented out to allow the arduino to be "re-registered"
         ardID = getValue(buff, ARDID);
         raspyID = getValue(buff, RASPYID);
         raspyIP = client.remoteIP();
@@ -209,7 +208,7 @@ static bool ARiFClass::checkIotGwIP(IPAddress ip) {
   }
 }
 
-static void ARiFClass::sendShadeStatus(byte devID, byte status) {
+static void ARiFClass::sendShadeStatus(byte devID, byte dataType, byte value) {
   if (!isConnected) return;  // exit function if the link is dead;
   Serial.print("Raspy IP: "); // to be removed 
   Serial.println(ARiFClass::raspyIP); // to be removed
@@ -233,11 +232,23 @@ static void ARiFClass::sendShadeStatus(byte devID, byte status) {
         ARiFClient.print(raspyID);
       }
     }
-    ARiFClient.print(F("&cmd=direction&devType=shade&dataType=bool&value="));
-    if (status == SS_MOVE) {
-      ARiFClient.print("1\n");
-    } else {
-      ARiFClient.print("0\n");
+    if (dataType == DT_DIRECTION) {
+      ARiFClient.print(F("&cmd=status&devType=shade&dataType=direction&value="));
+      if (value == VAL_MOVE_DOWN) {
+        ARiFClient.print("down\n");
+      } else if (value == VAL_MOVE_UP) {
+        ARiFClient.print("up\n");
+      } else if (value == VAL_STOPPED) {
+        ARiFClient.print("stop\n");
+      }
+    } else if (dataType == DT_POSITION) {
+      ARiFClient.print(F("&cmd=status&devType=shade&dataType=position&value="));
+      ARiFClient.print(value);
+      ARiFClient.print("\n");
+    } else if (dataType == DT_TILT) {
+      ARiFClient.print(F("&cmd=status&devType=shade&dataType=tilt&value="));
+      ARiFClient.print(value);
+      ARiFClient.print("\n");
     }
     ARiFClient.println("Host: raspy");
     ARiFClient.println("Connection: close");
@@ -248,13 +259,45 @@ static void ARiFClass::sendShadeStatus(byte devID, byte status) {
 }
 
 static void ARiFClass::sendShadeUp(byte devID) {
-  sendShadeStatus(devID, SS_MOVE);
+  sendShadeStatus(devID, DT_DIRECTION, VAL_MOVE_UP);
 }
 
 static void ARiFClass::sendShadeDown(byte devID) {
-  sendShadeStatus(devID, SS_MOVE);
+  sendShadeStatus(devID, DT_DIRECTION, VAL_MOVE_DOWN);
 }
 
 static void ARiFClass::sendShadeStop(byte devID) {
-  sendShadeStatus(devID, SS_STOP);
+  sendShadeStatus(devID, DT_DIRECTION, VAL_STOPPED);
+}
+
+static void ARiFClass::sendShadePosition(byte devID, byte position) {
+  sendShadeStatus(devID, DT_POSITION, position);
+}
+
+static void ARiFClass::sendShadeTilt(byte devID, byte tilt) {
+  sendShadeStatus(devID, DT_TILT, tilt);
+}
+
+static IPAddress ARiFClass::getRaspyIP() {
+  return ARiFClass::raspyIP;
+}
+
+static byte ARiFClass::getRaspyID() {
+  return ARiFClass::raspyID;
+}
+
+static byte ARiFClass::getArdID() {
+  return ARiFClass::ardID;
+}
+
+bool ARiFClass::timeCheck (struct t *t ) {
+  if (millis() > t->tStart + t->tTimeout) {
+    return true;    
+  } else {
+    return false;
+  }
+}
+
+void ARiFClass::timeRun (struct t *t) {
+    t->tStart = millis();
 }
