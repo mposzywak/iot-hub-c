@@ -18,6 +18,7 @@ static bool ARiFClass::isRegistered;
 static bool ARiFClass::signalIPchange = false;
 static ARiFClass::t ARiFClass::t_func1 = {0, 1000 * ARiF_BEACON_INT}; /* for ARiF beacon interval */
 static ARiFClass::t ARiFClass::t_func2 = {0, 1000}; /* for everysecond on the DHCP checking */
+static byte ARiFClass::lastShadePosition = 0;
 
 
 static byte ARiFClass::begin(byte version, byte mac[]) {
@@ -129,6 +130,7 @@ static byte ARiFClass::update() {
         break;
       case CMD_SHADEPOS:
         lastDevID = getValue(buff, DEVID);
+        lastShadePosition = getValue(buff, VALUE);
         client.println(F(HTTP_200_OK));
         client.println();
         client.stop();
@@ -178,15 +180,17 @@ static int ARiFClass::getValue(char *buff, int value) {
     pos = strstr(buff, "devID=");
     return atoi(pos + 6);
   }
-
   if (value == ARDID) {
     pos = strstr(buff, "ardID=");
     return atoi(pos + 6);
   }
-
   if (value == RASPYID) {
     pos = strstr(buff, "raspyID=");
     return atoi(pos + 8);
+  }
+  if (value == VALUE) {
+    pos = strstr(buff, "value=");
+    return atoi(pos + 6);
   }
   if (value == CMD ) {
     if (strstr(buff, "cmd=register")) return CMD_REGISTER;
@@ -210,11 +214,11 @@ static bool ARiFClass::checkIotGwIP(IPAddress ip) {
 
 static void ARiFClass::sendShadeStatus(byte devID, byte dataType, byte value) {
   if (!isConnected) return;  // exit function if the link is dead;
-  Serial.print("Raspy IP: "); // to be removed 
-  Serial.println(ARiFClass::raspyIP); // to be removed
   if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
-    Serial.print("connected to "); // to be removed 
-    Serial.println(ARiFClient.remoteIP()); // to be removed
+    Serial.print("devID: ");
+    Serial.print(devID);
+    Serial.print(" sending to "); // to be removed 
+    Serial.print(ARiFClient.remoteIP()); // to be removed
     // Make a HTTP request:
     ARiFClient.print("POST /?devID=");
     ARiFClient.print(devID);
@@ -233,20 +237,28 @@ static void ARiFClass::sendShadeStatus(byte devID, byte dataType, byte value) {
       }
     }
     if (dataType == DT_DIRECTION) {
+      Serial.print(" direction -> ");
       ARiFClient.print(F("&cmd=status&devType=shade&dataType=direction&value="));
       if (value == VAL_MOVE_DOWN) {
         ARiFClient.print("down\n");
+        Serial.println(" down. ");
       } else if (value == VAL_MOVE_UP) {
         ARiFClient.print("up\n");
+        Serial.println(" up. ");
       } else if (value == VAL_STOPPED) {
         ARiFClient.print("stop\n");
+        Serial.println(" stop. ");
       }
     } else if (dataType == DT_POSITION) {
+      Serial.print(" position: ");
+      Serial.println(value);
       ARiFClient.print(F("&cmd=status&devType=shade&dataType=position&value="));
       ARiFClient.print(value);
       ARiFClient.print("\n");
     } else if (dataType == DT_TILT) {
       ARiFClient.print(F("&cmd=status&devType=shade&dataType=tilt&value="));
+      Serial.print(" tilt: ");
+      Serial.println(value);
       ARiFClient.print(value);
       ARiFClient.print("\n");
     }
@@ -290,7 +302,7 @@ static byte ARiFClass::getArdID() {
   return ARiFClass::ardID;
 }
 
-bool ARiFClass::timeCheck (struct t *t ) {
+bool ARiFClass::timeCheck(struct t *t ) {
   if (millis() > t->tStart + t->tTimeout) {
     return true;    
   } else {
@@ -298,6 +310,14 @@ bool ARiFClass::timeCheck (struct t *t ) {
   }
 }
 
-void ARiFClass::timeRun (struct t *t) {
+void ARiFClass::timeRun(struct t *t) {
     t->tStart = millis();
+}
+
+byte ARiFClass::getLastDevID() {
+  return ARiFClass::lastDevID;
+}
+
+byte ARiFClass::getLastShadePosition() {
+  return lastShadePosition;
 }

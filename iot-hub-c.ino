@@ -311,19 +311,17 @@ void loop() {
   /* -- measurement code end -- */
 
 for (int i = 0; i < SHADES; i++) {
-  byte percent = shades[i].update();
-  if (percent <= 100) {
-    ARiF.sendShadePosition(shadeIDs[i], percent);
+  //byte pos = shades[i].update();
+  if (shades[i].update() <= 100) {
+    Serial.println("Sending 1 shade position");
+    ARiF.sendShadePosition(shadeIDs[i], shades[i].getCurrentPosition());
   }
     
-  
   if (shades[i].isUpPressed()) {
     if (shades[i].isMoving()) {
       shades[i].stop();
-      ARiF.sendShadeStop(shadeIDs[i]);
     } else {
       shades[i].up();
-      ARiF.sendShadeUp(shadeIDs[i]);
     }
     measure = true;
   }
@@ -331,10 +329,8 @@ for (int i = 0; i < SHADES; i++) {
   if (shades[i].isDownPressed()) {
     if (shades[i].isMoving()) {
       shades[i].stop();
-      ARiF.sendShadeStop(shadeIDs[i]);
     } else {
       shades[i].down();
-      ARiF.sendShadeDown(shadeIDs[i]);
     }
     measure = true;
   }
@@ -342,7 +338,12 @@ for (int i = 0; i < SHADES; i++) {
   if (shades[i].justStopped()) {
     ARiF.sendShadeStop(shadeIDs[i]);
   }
-
+  if (shades[i].justStartedDown()) {
+    ARiF.sendShadeDown(shadeIDs[i]);
+  }
+  if (shades[i].justStartedUp()) {
+    ARiF.sendShadeUp(shadeIDs[i]);
+  }
   
 }
 
@@ -353,13 +354,23 @@ switch (ARiF.update()) {
     Serial.println("Registered!");
     break;
   case CMD_SHADEPOS:
-    Serial.println("Shadepos received!");
+    Serial.print("Shadepos received with value: ");
+    Serial.println(ARiF.getLastShadePosition());
+    shades[0].toPosition(ARiF.getLastShadePosition());
     break;
   case CMD_SHADETILT:
     Serial.println("Shadetilt received!");
     break;
   case U_CONNECTED:
     Serial.println("Connected back!");
+    break;
+  case CMD_LIGHTON:
+    Serial.print("Received lightON command from: ");
+    Serial.print(ARiF.getLastDevID());
+    break;
+  case CMD_LIGHTOFF:
+    Serial.print("Received lightOFF command from: ");
+    Serial.print(ARiF.getLastDevID());
     break;
 }
 

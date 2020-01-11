@@ -43,11 +43,11 @@ void Shade::init(byte shadeID) {
 
   /* filling in the section borders with the border seconds of the movement range */
   sections[0] = 0;
-  sections[DEFAULT_PARTS] = DEFAULT_RANGE;
+  sections[4] = DEFAULT_RANGE;
   for (int i = 1; i < DEFAULT_PARTS; i++) {
     sections[i] = DEFAULT_RANGE / DEFAULT_PARTS * i;
   }
-
+  sections[4] = DEFAULT_RANGE;
   positionReported = false;
 }
 
@@ -91,14 +91,10 @@ bool Shade::isDownPressed() {
 
 byte Shade::update() {
   int sec = Controllino_GetSecond();
-
-  if (sec != Shade::oldSec) {
+  
+  if (sec != oldSec) {
     oldSec = sec;
-    /* CODE EXECUTED EVERY SECOND - START */
-    /*Serial.print("ShadeID: ");
-    Serial.print(shadeID);
-    Serial.print(" position: ");
-    Serial.println(position);*/
+    /* CODE EXECUTED EVERY SECOND - START */    
     bool movingUp = this->isMovingUp();
     bool movingDown = this->isMovingDown();
     if (!synced) {
@@ -119,15 +115,21 @@ byte Shade::update() {
         Serial.println("Shade synced");
       } 
     } else {
-      if (movingUp && position > desiredPosition) {
+      if (position > desiredPosition) { 
+        if (!movingUp)
+          upToPosition(desiredPosition); /* in this case the argument doesn't change anything as the desiredPosition has already been set */
         position--;
         positionReported = false;
+        Serial.println("setting reported false");
       } else if (movingUp && position == desiredPosition) {
         this->stop();
       }
-      if (movingDown && position < desiredPosition) {
+      if (position < desiredPosition) {
+        if (!movingDown)
+          downToPosition(desiredPosition); /* in this case the argument doesn't change anything as the desiredPosition has already been set */
         position++;
         positionReported = false;
+        Serial.println("setting reported false");
       } else if (movingDown && position == desiredPosition) {
         this->stop();
       }
@@ -135,47 +137,68 @@ byte Shade::update() {
     }
 
     if (position == sections[0] && positionReported == false && synced) {
-      positionReported = true;
+      Serial.println("setting reported true");
+      reachedPosition = 0;
       return 0;
     } else if (position == sections[1] && positionReported == false && synced) {
-      positionReported = true;
+      Serial.println("setting reported true");
+      reachedPosition = 25;
       return 25;
     } else if (position == sections[2] && positionReported == false && synced) {
-      positionReported = true;
+      Serial.println("setting reported true");
+      reachedPosition = 50;
       return 50;
     } else if (position == sections[3] && positionReported == false && synced) {
-      positionReported = true;
+      Serial.println("setting reported true");
+      reachedPosition = 75;
       return 75; 
     } else if (position == sections[4] && positionReported == false && synced) {
-      positionReported = true;
+      Serial.println("setting reported true");
+      reachedPosition = 100;
       return 100;
     } else {
         return 255;
     }
     /* CODE EXECUTED EVERY SECOND - END */
+  } else {
+    return 255; /* this is needed for the update function to return something meaningful if it 
+    runs second and more times during a second. Apparently if there is no return value statement 
+    specified in the function code path, it gets randomized. That in our case here caused unpredictable
+    results */
   }
 }
 
 void Shade::up() {
+  this->upToPosition(0);
+}
+
+
+void Shade::down() {
+  this->downToPosition(DEFAULT_RANGE);
+}
+
+void Shade::upToPosition(byte dp) {
   digitalWrite(outPinUp, Shade::high);
   digitalWrite(outPinDown, Shade::low);
   outPinUpState = Shade::high;
   if (!synced) {
     position = movementRange;
   } else {
-    desiredPosition = 0;
+    desiredPosition = dp;
   }
+  justStartedUpVar = true;
 }
 
-void Shade::down() {
+void Shade::downToPosition(byte dp) {
   digitalWrite(outPinUp, Shade::low);
   digitalWrite(outPinDown, Shade::high);
   outPinDownState = Shade::high;
   if (!synced) {
     position = 0;
   } else {
-    desiredPosition = DEFAULT_RANGE;
+    desiredPosition = dp;
   }
+  justStartedDownVar = true;
 }
 
 void Shade::stop() {
@@ -217,4 +240,35 @@ bool Shade::justStopped() {
   } else {
     return false;
   }
+}
+
+bool Shade::justStartedUp() {
+  if (justStartedUpVar) {
+    justStartedUpVar = false;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool Shade::justStartedDown() {
+  if (justStartedDownVar) {
+    justStartedDownVar = false;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+byte Shade::getCurrentPosition() {
+  positionReported = true;
+  return reachedPosition;
+}
+
+void Shade::toPosition(byte position) {
+  if (position == 0) desiredPosition = sections[0];
+  if (position == 25) desiredPosition = sections[1];
+  if (position == 50) desiredPosition = sections[2];
+  if (position == 75) desiredPosition = sections[3];
+  if (position == 100) desiredPosition = sections[4];
 }

@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include <Ethernet.h>
 #include <EthernetUDP.h>
-#include <Controllino.h>
 
 #ifndef ARIF_H_
 #define ARIF_H_
@@ -45,6 +44,7 @@
 #define ARDID   1
 #define RASPYID 2
 #define CMD     3
+#define VALUE   4
 
 /* Shade status to control sendShadeStatus() CMD value */
 #define VAL_MOVE_UP     2
@@ -109,6 +109,9 @@ class ARiFClass {
 
     /* variable holding devID of the last received command */
     static byte lastDevID;
+
+    /* variable holding shade position received by the last shadePOS command */
+    static byte lastShadePosition;
 
     /* holds information if this arduino is registered */
     static bool isRegistered;
@@ -194,6 +197,12 @@ class ARiFClass {
 
     /* get the currently assigned ardID by the controlling raspy */
     static byte getArdID();
+
+    /* get the devID of the last received command */
+    static byte getLastDevID();
+
+    /* get the position of the last received shadePOS command */
+    static byte getLastShadePosition();
 
 };
 

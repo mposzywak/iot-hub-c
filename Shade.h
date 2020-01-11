@@ -46,12 +46,19 @@ class Shade {
 
     /* contains true if the Shade has just been stopped. Upon reporting it is supposed to be set to false */
     bool justStoppedVar;
+    bool justStartedUpVar;
+    bool justStartedDownVar;
 
     byte oldSec;
 
-    byte sections[DEFAULT_PARTS];
+    byte sections[6];
 
     bool positionReported;
+
+    byte reachedPosition;
+
+    void upToPosition(byte dp);
+    void downToPosition(byte dp);
 
   public:
 
@@ -92,6 +99,13 @@ class Shade {
 
   /* returns true if the Shade has just stopped moveing and changes justStopped variable to false */
   bool justStopped();
+  bool justStartedUp();
+  bool justStartedDown();
+
+  /* sets the desired position of the shade to a given value */
+  void toPosition(byte position);
+
+  byte getCurrentPosition();
   
 };
 
