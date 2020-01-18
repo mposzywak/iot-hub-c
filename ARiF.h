@@ -50,11 +50,14 @@
 #define VAL_MOVE_UP     2
 #define VAL_MOVE_DOWN   1
 #define VAL_STOPPED     0
+#define VAL_UNSYNC      3
+#define VAL_SYNC        4
 
 /* shade status dataType values */
 #define DT_DIRECTION 0
 #define DT_POSITION  1
 #define DT_TILT      2
+#define DT_SYNC      3
 
 class ARiFClass {
   typedef struct t  {
@@ -203,6 +206,12 @@ class ARiFClass {
 
     /* get the position of the last received shadePOS command */
     static byte getLastShadePosition();
+
+    /* send the shade sync information */
+    static void sendShadeSynced(byte devID);
+
+    /* send information that the shade is not synced */
+    static void sendShadeUnsynced(byte devID);
 
 };
 

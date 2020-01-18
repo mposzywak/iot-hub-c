@@ -261,7 +261,19 @@ static void ARiFClass::sendShadeStatus(byte devID, byte dataType, byte value) {
       Serial.println(value);
       ARiFClient.print(value);
       ARiFClient.print("\n");
+    } else if (dataType == DT_SYNC) {
+      Serial.print(" sync: ");
+      Serial.println(value);
+      ARiFClient.print(F("&cmd=status&devType=shade&dataType=sync&value="));
+      if (value == VAL_UNSYNC) {
+        ARiFClient.print("0\n");
+        Serial.println(" false. ");
+      } else if (value == VAL_SYNC) {
+        ARiFClient.print("1\n");
+        Serial.println(" true. ");
+      }
     }
+    
     ARiFClient.println("Host: raspy");
     ARiFClient.println("Connection: close");
     ARiFClient.println();
@@ -288,6 +300,14 @@ static void ARiFClass::sendShadePosition(byte devID, byte position) {
 
 static void ARiFClass::sendShadeTilt(byte devID, byte tilt) {
   sendShadeStatus(devID, DT_TILT, tilt);
+}
+
+static void ARiFClass::sendShadeSynced(byte devID) {
+  sendShadeStatus(devID, DT_SYNC, VAL_SYNC);
+}
+
+static void ARiFClass::sendShadeUnsynced(byte devID) {
+  sendShadeStatus(devID, DT_SYNC, VAL_UNSYNC);
 }
 
 static IPAddress ARiFClass::getRaspyIP() {

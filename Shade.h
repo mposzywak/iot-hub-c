@@ -13,6 +13,13 @@
  * Class for handling of the Shades. Each object represents one shade composed of 4 pins (2 inputs for both directions and 2 outputs for both directions)
  */
 class Shade {
+  /* types definitions */
+  typedef struct t  {
+    unsigned long tStart;
+    unsigned long tTimeout;
+    bool executed;
+  };
+  
   private:
     byte shadeID;
 
@@ -53,13 +60,30 @@ class Shade {
 
     byte sections[6];
 
+    /* contains the flag if the last checkpoint value has been already reported */
     bool positionReported;
 
+    /* contains the value of the last checkpoint Position */
     byte reachedPosition;
+
+    /* contains the flag if the information about Shade being unsync has been already reported */
+    bool unsyncReported;
+
+    /* contains information into which direction should be enabled after the programmed delay on swapping direction
+     *  true  - UP
+     *  false - DOWN
+     */
+    bool swapDirection;
 
     void upToPosition(byte dp);
     void downToPosition(byte dp);
 
+    t dir_swap;
+
+    /* functions to control time based execution */
+    bool Shade::timeCheck(struct t *t );
+    void Shade::timeRun(struct t *t);
+    
   public:
 
     static byte low;
@@ -106,6 +130,12 @@ class Shade {
   void toPosition(byte position);
 
   byte getCurrentPosition();
+
+  /* get the current devID/shadeID of the object */
+  byte getDevID();
+
+  /* returns if the Shade is in synced state */
+  bool isSynced();
   
 };
 

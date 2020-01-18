@@ -356,7 +356,12 @@ switch (ARiF.update()) {
   case CMD_SHADEPOS:
     Serial.print("Shadepos received with value: ");
     Serial.println(ARiF.getLastShadePosition());
-    shades[0].toPosition(ARiF.getLastShadePosition());
+    byte lastDevID = ARiF.getLastDevID();
+    //Serial.println(s.getDevID()); // why s.toPosition() doesn't work??
+    for (int i = 0; i < SHADES; i++) {
+      if (shades[i].getDevID() == lastDevID) shades[i].toPosition(ARiF.getLastShadePosition());
+    }
+    //shades[0].toPosition(ARiF.getLastShadePosition());
     break;
   case CMD_SHADETILT:
     Serial.println("Shadetilt received!");
@@ -431,6 +436,12 @@ switch (ARiF.update()) {
  * -----------------
  */
 
+/* return the shade object with the given devID */
+Shade getShade(byte devID) {
+  for (int i = 0; i < SHADES; i++) {
+    if (shades[i].getDevID() == devID) return shades[i];
+  }
+}
 
 /* 
  *  Handle the incoming HTTP connection.

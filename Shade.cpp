@@ -49,6 +49,9 @@ void Shade::init(byte shadeID) {
   }
   sections[4] = DEFAULT_RANGE;
   positionReported = false;
+  unsyncReported = false;
+
+  dir_swap = { 0, 300, true }; /* The 300ms timer to wait before changing direction up/down */
 }
 
 bool Shade::isUpPressed() {
@@ -91,13 +94,25 @@ bool Shade::isDownPressed() {
 
 byte Shade::update() {
   int sec = Controllino_GetSecond();
+
+  if (timeCheck(&dir_swap)) {
+    Serial.println("Executing delayed change *");
+    Serial.println(millis());
+    if (swapDirection == true) {
+      digitalWrite(outPinUp, Shade::high);
+      outPinUpState = Shade::high;
+    } else { /* swapDirection == false */
+      digitalWrite(outPinDown, Shade::high);
+      outPinDownState = Shade::high;
+    }
+  }
   
   if (sec != oldSec) {
     oldSec = sec;
     /* CODE EXECUTED EVERY SECOND - START */    
     bool movingUp = this->isMovingUp();
     bool movingDown = this->isMovingDown();
-    if (!synced) {
+    if (!synced) { /* not synced */
       if (movingUp && position > 0) {
         position--;
         positionReported = false;
@@ -114,7 +129,7 @@ byte Shade::update() {
         this->stop();
         Serial.println("Shade synced");
       } 
-    } else {
+    } else { /* synced */
       if (position > desiredPosition) { 
         if (!movingUp)
           upToPosition(desiredPosition); /* in this case the argument doesn't change anything as the desiredPosition has already been set */
@@ -178,9 +193,16 @@ void Shade::down() {
 }
 
 void Shade::upToPosition(byte dp) {
-  digitalWrite(outPinUp, Shade::high);
   digitalWrite(outPinDown, Shade::low);
-  outPinUpState = Shade::high;
+  if (outPinDownState == Shade::high) { /* on condition shade was moving in the opposite direction */
+    timeRun(&dir_swap);
+    Serial.println(millis());
+    swapDirection = true;
+  } else { /* on condition shade was already moving in the desired direction or stopped */
+    digitalWrite(outPinUp, Shade::high);
+    outPinUpState = Shade::high;
+  }
+  outPinDownState = Shade::low;
   if (!synced) {
     position = movementRange;
   } else {
@@ -191,8 +213,15 @@ void Shade::upToPosition(byte dp) {
 
 void Shade::downToPosition(byte dp) {
   digitalWrite(outPinUp, Shade::low);
-  digitalWrite(outPinDown, Shade::high);
-  outPinDownState = Shade::high;
+  if (outPinUpState == Shade::high) { /* on condition shade was moving in the opposite direction */
+    timeRun(&dir_swap);
+    Serial.println(millis());
+    swapDirection = false;
+  } else { /* on condition shade was already moving in the desired direction or stopped */
+    digitalWrite(outPinDown, Shade::high);
+    outPinDownState = Shade::high;
+  }
+  outPinUpState = Shade::low;
   if (!synced) {
     position = 0;
   } else {
@@ -271,4 +300,31 @@ void Shade::toPosition(byte position) {
   if (position == 50) desiredPosition = sections[2];
   if (position == 75) desiredPosition = sections[3];
   if (position == 100) desiredPosition = sections[4];
+}
+
+byte Shade::getDevID() {
+  return this->shadeID;
+}
+
+bool Shade::isSynced() {
+  if (!unsyncReported) {
+    unsyncReported = true;
+    return synced;
+  } else {
+    return true;
+  }
+}
+
+bool Shade::timeCheck(struct t *t ) {
+  if (millis() > t->tStart + t->tTimeout && t->executed == false) {
+    t->executed = true;
+    return true;    
+  } else {
+    return false;
+  }
+}
+
+void Shade::timeRun(struct t *t) {
+    t->tStart = millis();
+    t->executed = false;
 }
