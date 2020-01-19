@@ -316,7 +316,7 @@ bool Shade::isSynced() {
 }
 
 bool Shade::timeCheck(struct t *t ) {
-  if (millis() > t->tStart + t->tTimeout && t->executed == false) {
+  if ((unsigned long)(millis() - t->tStart) > t->tTimeout && t->executed == false) {
     t->executed = true;
     return true;    
   } else {

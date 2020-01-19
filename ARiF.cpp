@@ -323,7 +323,7 @@ static byte ARiFClass::getArdID() {
 }
 
 bool ARiFClass::timeCheck(struct t *t ) {
-  if (millis() > t->tStart + t->tTimeout) {
+  if ((unsigned long)(millis() - t->tStart) > t->tTimeout) {
     return true;    
   } else {
     return false;
