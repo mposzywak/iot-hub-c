@@ -93,10 +93,7 @@ static byte ARiFClass::update() {
         client.println(F(HTTP_200_OK)); /* write 200 OK */
         client.stop();                  /* send */
         lastHeartbeat = 0;              /* reset the heartbeat timer */
-        /*if (checkIotGwIP(client.remoteIP())) {
-          signalIPchange = true;
-        }*/
-        if (!isConnected) {
+        if (isConnected == 0) {
           isConnected = true;
           return U_CONNECTED;
         }
@@ -113,6 +110,20 @@ static byte ARiFClass::update() {
         client.stop();
         return CMD_REGISTER;
         //}
+        break;
+      case CMD_SHADEUP:
+        lastDevID = getValue(buff, DEVID);
+        client.println(F(HTTP_200_OK));
+        client.println();
+        client.stop();
+        return CMD_SHADEUP;
+        break;
+      case CMD_SHADEDOWN:
+        lastDevID = getValue(buff, DEVID);
+        client.println(F(HTTP_200_OK));
+        client.println();
+        client.stop();
+        return CMD_SHADEDOWN;
         break;
       case CMD_LIGHTON:
         lastDevID = getValue(buff, DEVID);
@@ -199,6 +210,8 @@ static int ARiFClass::getValue(char *buff, int value) {
     if (strstr(buff, "cmd=lightOFF")) return CMD_LIGHTOFF;
     if (strstr(buff, "cmd=shadePOS")) return CMD_SHADEPOS;
     if (strstr(buff, "cmd=shadeTILT")) return CMD_SHADETILT;
+    if (strstr(buff, "cmd=shadeUP")) return CMD_SHADEUP;
+    if (strstr(buff, "cmd=shadeDOWN")) return CMD_SHADEDOWN;
     return CMD_UNKNOWN;
   }
 }

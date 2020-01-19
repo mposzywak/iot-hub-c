@@ -29,12 +29,14 @@
 #define CMD_LIGHTOFF  3
 #define CMD_SHADEPOS  4
 #define CMD_SHADETILT 5
+#define CMD_SHADEUP   6
+#define CMD_SHADEDOWN 7
 #define CMD_UNKNOWN   10
 
 /* values returned by update() other than the CMDs above */
 #define U_NOTHING       50
 #define U_DISCONNECTED  51
-#define U_CONNECTED     52
+#define U_CONNECTED     60
 #define U_REGISTERED    53
 #define U_RASPYIPCHGD   54
 

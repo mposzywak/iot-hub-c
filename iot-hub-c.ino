@@ -347,27 +347,50 @@ for (int i = 0; i < SHADES; i++) {
   
 }
 
-switch (ARiF.update()) {
+byte ret = ARiF.update();
+byte lastDevID;
+switch (ret) {
+  case U_CONNECTED:
+    Serial.println("Connected back!");
+    for (int i = 0; i < SHADES; i++) {
+      if (!shades[i].isSynced()) {
+        Serial.println("sending sync");
+        ARiF.sendShadeUnsynced(shadeIDs[i]);
+      }
+    }
+    break;
   case U_NOTHING:
     break;
   case CMD_REGISTER:
     Serial.println("Registered!");
     break;
+  case CMD_SHADEUP:
+    Serial.print("ShadeUP received for: ");
+    Serial.println(ARiF.getLastDevID());
+    lastDevID = ARiF.getLastDevID();
+    for (int i = 0; i < SHADES; i++) {
+      if (shades[i].getDevID() == lastDevID) shades[i].up();
+    }
+    break;
+  case CMD_SHADEDOWN:
+    Serial.print("ShadeDOWN received for: ");
+    Serial.println(ARiF.getLastDevID());
+    lastDevID = ARiF.getLastDevID();
+    for (int i = 0; i < SHADES; i++) {
+      if (shades[i].getDevID() == lastDevID) shades[i].down();
+    }
+    break;    
   case CMD_SHADEPOS:
     Serial.print("Shadepos received with value: ");
     Serial.println(ARiF.getLastShadePosition());
-    byte lastDevID = ARiF.getLastDevID();
+    lastDevID = ARiF.getLastDevID();
     //Serial.println(s.getDevID()); // why s.toPosition() doesn't work??
     for (int i = 0; i < SHADES; i++) {
       if (shades[i].getDevID() == lastDevID) shades[i].toPosition(ARiF.getLastShadePosition());
     }
-    //shades[0].toPosition(ARiF.getLastShadePosition());
     break;
   case CMD_SHADETILT:
     Serial.println("Shadetilt received!");
-    break;
-  case U_CONNECTED:
-    Serial.println("Connected back!");
     break;
   case CMD_LIGHTON:
     Serial.print("Received lightON command from: ");
@@ -377,6 +400,11 @@ switch (ARiF.update()) {
     Serial.print("Received lightOFF command from: ");
     Serial.print(ARiF.getLastDevID());
     break;
+  case CMD_UNKNOWN:
+    Serial.print("Received unknown command from: ");
+    Serial.print(ARiF.getLastDevID());
+    break;
+    
 }
 
 /*
