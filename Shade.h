@@ -78,11 +78,15 @@ class Shade {
     void upToPosition(byte dp);
     void downToPosition(byte dp);
 
+    /* holds time values for time gap on shade movement direction change */
     t dir_swap;
+
+    t updateExec;
 
     /* functions to control time based execution */
     bool Shade::timeCheck(struct t *t );
     void Shade::timeRun(struct t *t);
+
     
   public:
 

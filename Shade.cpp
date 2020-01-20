@@ -39,7 +39,6 @@ void Shade::init(byte shadeID) {
   movementRange = DEFAULT_RANGE;
   synced = false;
   justStoppedVar = false;
-  oldSec = 0;
 
   /* filling in the section borders with the border seconds of the movement range */
   sections[0] = 0;
@@ -52,6 +51,8 @@ void Shade::init(byte shadeID) {
   unsyncReported = false;
 
   dir_swap = { 0, 300, true }; /* The 300ms timer to wait before changing direction up/down */
+
+  updateExec = { 0, 1000, false }; /* The timer to control the update() frequency */
 }
 
 bool Shade::isUpPressed() {
@@ -107,8 +108,7 @@ byte Shade::update() {
     }
   }
   
-  if (sec != oldSec) {
-    oldSec = sec;
+  if (timeCheck(&updateExec)) {
     /* CODE EXECUTED EVERY SECOND - START */    
     bool movingUp = this->isMovingUp();
     bool movingDown = this->isMovingDown();
@@ -150,7 +150,7 @@ byte Shade::update() {
       }
       
     }
-
+    timeRun(&updateExec);
     if (position == sections[0] && positionReported == false && synced) {
       Serial.println("setting reported true");
       reachedPosition = 0;
