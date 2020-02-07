@@ -50,9 +50,19 @@ void Shade::init(byte shadeID) {
   positionReported = false;
   unsyncReported = false;
 
-  dir_swap = { 0, 300, true }; /* The 300ms timer to wait before changing direction up/down */
+  /* filling in the section borders with the border miliseconds of the tilt movement range */
+  tiltRange = DEFAULT_TILT_RANGE;
+  tiltSections[0] = DEFAULT_TILT_RANGE;
+  tiltSections[1] = DEFAULT_TILT_RANGE / 2;
+  tiltSections[2] = 0;
 
+  dir_swap = { 0, 300, true }; /* The 300ms timer to wait before changing direction up/down */
   updateExec = { 0, 1000, false }; /* The timer to control the update() frequency */
+  tiltRun = { 0, 500, true };
+  waitBeforeTilt = { 0, 500, true };
+
+  desiredTilt = TILT_H_CLOSED;
+  tiltMovement = false;
 }
 
 bool Shade::isUpPressed() {
@@ -107,11 +117,44 @@ byte Shade::update() {
       outPinDownState = Shade::high;
     }
   }
+
+  if (timeCheck(&waitBeforeTilt)) {
+    /* waited time to start the tilt movement */
+    tiltMovement = true;
+    Serial.println("Starting tilt movement");
+    if (tiltDirection == true) {
+      digitalWrite(outPinUp, Shade::high);
+      //outPinUpState = Shade::high;
+    } else { /* tiltDirection == false */
+      digitalWrite(outPinDown, Shade::high);
+      //outPinDownState = Shade::high;
+    }
+    timeRun(&tiltRun);
+  }
+
+  if (timeCheck(&tiltRun)) {
+    Serial.println("Stopping tilt movement");
+    tiltMovement = false;
+    Serial.println(tiltMovement);
+    this->stop();
+  }
   
-  if (timeCheck(&updateExec)) {
+  if (timeCheck(&updateExec)) { /* no combining with any other condition! If timeCheck executes but there is no timeRun(), this code will stop executing.  */
     /* CODE EXECUTED EVERY SECOND - START */    
     bool movingUp = this->isMovingUp();
     bool movingDown = this->isMovingDown();
+    if (shadeID == 1) {
+      Serial.print("position: ");
+      Serial.print(position);
+      Serial.print(" desired position: ");
+      Serial.print(desiredPosition);
+      Serial.print(" down: ");
+      Serial.print(movingDown);
+      Serial.print(" up: ");
+      Serial.println(movingUp);
+      Serial.println(tiltMovement);
+    }
+ 
     if (!synced) { /* not synced */
       if (movingUp && position > 0) {
         position--;
@@ -119,6 +162,7 @@ byte Shade::update() {
       } else if (movingUp && position == 0) {
         synced = true;
         this->stop();
+        //setTiltFromUp();
         Serial.println("Shade synced");
       }
       if (movingDown && position < movementRange) {
@@ -127,6 +171,7 @@ byte Shade::update() {
       } else if (movingDown && position == movementRange) {
         synced = true;
         this->stop();
+        //setTiltFromDown();
         Serial.println("Shade synced");
       } 
     } else { /* synced */
@@ -137,7 +182,9 @@ byte Shade::update() {
         positionReported = false;
         Serial.println("setting reported false");
       } else if (movingUp && position == desiredPosition) {
+        Serial.println("Reached pos by moving Up");
         this->stop();
+        setTiltFromUp();
       }
       if (position < desiredPosition) {
         if (!movingDown)
@@ -146,7 +193,9 @@ byte Shade::update() {
         positionReported = false;
         Serial.println("setting reported false");
       } else if (movingDown && position == desiredPosition) {
+        Serial.println("Reached pos by moving Down");
         this->stop();
+        setTiltFromDown();
       }
       
     }
@@ -196,7 +245,6 @@ void Shade::upToPosition(byte dp) {
   digitalWrite(outPinDown, Shade::low);
   if (outPinDownState == Shade::high) { /* on condition shade was moving in the opposite direction */
     timeRun(&dir_swap);
-    Serial.println(millis());
     swapDirection = true;
   } else { /* on condition shade was already moving in the desired direction or stopped */
     digitalWrite(outPinUp, Shade::high);
@@ -215,7 +263,6 @@ void Shade::downToPosition(byte dp) {
   digitalWrite(outPinUp, Shade::low);
   if (outPinUpState == Shade::high) { /* on condition shade was moving in the opposite direction */
     timeRun(&dir_swap);
-    Serial.println(millis());
     swapDirection = false;
   } else { /* on condition shade was already moving in the desired direction or stopped */
     digitalWrite(outPinDown, Shade::high);
@@ -236,6 +283,8 @@ void Shade::stop() {
   outPinUpState = Shade::low;
   outPinDownState = Shade::low;
   justStoppedVar = true;
+  tiltMovement = false;
+  desiredPosition = position;
 }
 
 bool Shade::isMoving() {
@@ -327,4 +376,36 @@ bool Shade::timeCheck(struct t *t ) {
 void Shade::timeRun(struct t *t) {
     t->tStart = millis();
     t->executed = false;
+}
+
+void Shade::setTilt(byte tilt) {
+  desiredTilt = tilt;
+}
+
+void Shade::setTiltFromUp() {
+  if (desiredTilt == TILT_F_CLOSED) {        /* move 1000ms down */
+    tiltRun.tTimeout = 1000;
+    tiltDirection = false;
+    timeRun(&waitBeforeTilt);
+  } else if (desiredTilt == TILT_H_CLOSED) { /* move 500ms down */
+    tiltRun.tTimeout = 500;
+    tiltDirection = false;
+    timeRun(&waitBeforeTilt);
+  } else if (desiredTilt == TILT_F_OPEN) {   /* do nothing */
+    
+  }
+}
+
+void Shade::setTiltFromDown() {
+  if (desiredTilt == TILT_F_CLOSED) {        /* do nothing */
+    
+  } else if (desiredTilt == TILT_H_CLOSED) { /* move 500ms up */
+    tiltRun.tTimeout = 500;
+    tiltDirection = true;
+    timeRun(&waitBeforeTilt);
+  } else if (desiredTilt == TILT_F_OPEN) {   /* move 1000ms up */
+    tiltRun.tTimeout = 1000;
+    tiltDirection = true;
+    timeRun(&waitBeforeTilt);
+  }
 }

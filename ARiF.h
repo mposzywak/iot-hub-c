@@ -118,6 +118,9 @@ class ARiFClass {
     /* variable holding shade position received by the last shadePOS command */
     static byte lastShadePosition;
 
+    /* variable holding shade tilt received by the last shadeTILT command */
+    static byte lastShadeTilt;
+
     /* holds information if this arduino is registered */
     static bool isRegistered;
 
@@ -208,6 +211,9 @@ class ARiFClass {
 
     /* get the position of the last received shadePOS command */
     static byte getLastShadePosition();
+
+    /* get the tilt of the last received shadeTILT command */
+    static byte getLastShadeTilt();
 
     /* send the shade sync information */
     static void sendShadeSynced(byte devID);

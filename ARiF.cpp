@@ -19,6 +19,7 @@ static bool ARiFClass::signalIPchange = false;
 static ARiFClass::t ARiFClass::t_func1 = {0, 1000 * ARiF_BEACON_INT}; /* for ARiF beacon interval */
 static ARiFClass::t ARiFClass::t_func2 = {0, 1000}; /* for everysecond on the DHCP checking */
 static byte ARiFClass::lastShadePosition = 0;
+static byte ARiFClass::lastShadeTilt = 0;
 
 
 static byte ARiFClass::begin(byte version, byte mac[]) {
@@ -149,6 +150,7 @@ static byte ARiFClass::update() {
         break;
       case CMD_SHADETILT:
         lastDevID = getValue(buff, DEVID);
+        lastShadeTilt = getValue(buff, VALUE);
         client.println(F(HTTP_200_OK));
         client.println();
         client.stop();
@@ -353,4 +355,8 @@ byte ARiFClass::getLastDevID() {
 
 byte ARiFClass::getLastShadePosition() {
   return lastShadePosition;
+}
+
+byte ARiFClass::getLastShadeTilt() {
+  return lastShadeTilt;
 }

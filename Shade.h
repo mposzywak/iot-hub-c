@@ -9,6 +9,18 @@
 /* defines the number sections that the range is devided to. This means that by changing the range section the shade will report its position */
 #define DEFAULT_PARTS 4
 
+/* predefined possible tilt positions */
+#define TILT_F_CLOSED  0
+#define TILT_H_CLOSED  45
+#define TILT_F_OPEN    90
+
+/*  */
+#define DIRECTION_DOWN 0
+#define DIRECTION_UP   1
+
+/* default tilt range movement length in miliseconds */
+#define DEFAULT_TILT_RANGE 1000
+
 /*
  * Class for handling of the Shades. Each object represents one shade composed of 4 pins (2 inputs for both directions and 2 outputs for both directions)
  */
@@ -40,6 +52,14 @@ class Shade {
 
     /* the amount of time (in seconds) it takes for the shade to fully open from fully closed state (or vice-versa) */
     byte movementRange;
+
+    /* this is the tilt value of the current shade. It is configurable. */
+    byte tiltRange;
+
+    /* variable indicating the desired tilt. This is used to control the shade tilt */
+    byte desiredTilt;
+
+    int tiltSections[3];
 
     /* variables holding states of input and output pins */
     byte outPinUpState;
@@ -75,6 +95,15 @@ class Shade {
      */
     bool swapDirection;
 
+    /* contains information which way the tilt should be moved 
+     * true  - UP
+     * false - DOWN
+     */
+    bool tiltDirection;
+
+    /* holds information if the current move is a tilt movement (so that other conditions can be disabled) */
+    bool tiltMovement;
+
     void upToPosition(byte dp);
     void downToPosition(byte dp);
 
@@ -83,9 +112,20 @@ class Shade {
 
     t updateExec;
 
+    /* holds time that the tilt move has to run */
+    t tiltRun;
+
+    /* holds time that the shade should wait after it stops moveing to make the tilting move */
+    t waitBeforeTilt;
+
     /* functions to control time based execution */
     bool Shade::timeCheck(struct t *t );
     void Shade::timeRun(struct t *t);
+
+    /* this function is executed every time the shade stops and the movement adjust the tilt. 
+    Depending whether the movement is up or down the respective function is called */
+    void setTiltFromUp();
+    void setTiltFromDown();
 
     
   public:
@@ -140,6 +180,10 @@ class Shade {
 
   /* returns if the Shade is in synced state */
   bool isSynced();
+
+  /* set the desired tilt of the shade */
+  void setTilt(byte tilt);
+
   
 };
 

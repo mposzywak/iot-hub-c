@@ -83,19 +83,6 @@ bool isRegistered = false;
 /* holds the IP of the Raspy/iot-gw */
 IPAddress iotGwIP;
 
-/* stores value how many seconds ago last heartbeat was received */
-byte lastHeartbeat = 0;
-
-/* holds information if the iot-hub is connected to the iot-gw */
-bool isConnected = false;
-
-/* variable to indicate the DHCP failure at the boot. If DHCP failed
- *  at boot then there is no sense in re-trying every 1 sec as it will block
- *  the Hub for at least one second rendering it unresponsive. 
- *  -- Workaround: reboot the Hub once Connctivity/DHCP server is fixed. */
-bool DHCPFailed = false;
-
-
 #if defined(CONTROLLINO_MEGA)
 
 byte shadeIDs[SHADES] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
@@ -255,7 +242,8 @@ switch (ret) {
     }
     break;
   case CMD_SHADETILT:
-    Serial.println("Shadetilt received!");
+    Serial.print("Shadetilt received!");
+    Serial.println(ARiF.getLastShadeTilt());
     break;
   case CMD_LIGHTON:
     Serial.print("Received lightON command from: ");
