@@ -173,7 +173,11 @@ class Shade {
   /* sets the desired position of the shade to a given value */
   void toPosition(byte position);
 
+  /* get current position */
   byte getCurrentPosition();
+
+  /* return the tilt value */
+  byte getTilt();
 
   /* get the current devID/shadeID of the object */
   byte getDevID();

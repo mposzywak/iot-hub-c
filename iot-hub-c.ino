@@ -208,6 +208,7 @@ switch (ret) {
       if (!shades[i].isSynced()) {
         Serial.println("sending sync");
         ARiF.sendShadeUnsynced(shadeIDs[i]);
+        ARiF.sendShadeTilt(shadeIDs[i], shades[i].getTilt());
       }
     }
     break;
@@ -242,8 +243,13 @@ switch (ret) {
     }
     break;
   case CMD_SHADETILT:
-    Serial.print("Shadetilt received!");
+    Serial.print("Shadetilt received: ");
     Serial.println(ARiF.getLastShadeTilt());
+    lastDevID = ARiF.getLastDevID();
+    //Serial.println(s.getDevID()); // why s.toPosition() doesn't work??
+    for (int i = 0; i < SHADES; i++) {
+      if (shades[i].getDevID() == lastDevID) shades[i].setTilt(ARiF.getLastShadeTilt());
+    }
     break;
   case CMD_LIGHTON:
     Serial.print("Received lightON command from: ");

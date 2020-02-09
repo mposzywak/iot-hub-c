@@ -135,15 +135,16 @@ byte Shade::update() {
   if (timeCheck(&tiltRun)) {
     Serial.println("Stopping tilt movement");
     tiltMovement = false;
-    Serial.println(tiltMovement);
     this->stop();
   }
   
-  if (timeCheck(&updateExec)) { /* no combining with any other condition! If timeCheck executes but there is no timeRun(), this code will stop executing.  */
+  if (timeCheck(&updateExec)) { 
+    /* no combining with any other condition! If timeCheck executes but there is no timeRun(), 
+       this code will stop executing.  */
     /* CODE EXECUTED EVERY SECOND - START */    
     bool movingUp = this->isMovingUp();
     bool movingDown = this->isMovingDown();
-    if (shadeID == 1) {
+    /*if (shadeID == 1) {
       Serial.print("position: ");
       Serial.print(position);
       Serial.print(" desired position: ");
@@ -153,7 +154,7 @@ byte Shade::update() {
       Serial.print(" up: ");
       Serial.println(movingUp);
       Serial.println(tiltMovement);
-    }
+    }*/
  
     if (!synced) { /* not synced */
       if (movingUp && position > 0) {
@@ -371,6 +372,10 @@ bool Shade::timeCheck(struct t *t ) {
   } else {
     return false;
   }
+}
+
+byte Shade::getTilt() {
+  return desiredTilt;
 }
 
 void Shade::timeRun(struct t *t) {
