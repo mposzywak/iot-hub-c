@@ -4,7 +4,7 @@
 #define SHADE_H_
 
 /* defines how many seconds does it take to move the entire shade from closed to open or vice-versa */
-#define DEFAULT_RANGE 16
+#define DEFAULT_RANGE 64
 
 /* defines the number sections that the range is devided to. This means that by changing the range section the shade will report its position */
 #define DEFAULT_PARTS 4
@@ -13,6 +13,9 @@
 #define TILT_F_CLOSED  0
 #define TILT_H_CLOSED  45
 #define TILT_F_OPEN    90
+
+#define TILT_FULL_MOVE 1100
+#define TILT_HALF_MOVE 550
 
 /*  */
 #define DIRECTION_DOWN 0

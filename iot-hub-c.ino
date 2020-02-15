@@ -205,10 +205,12 @@ switch (ret) {
   case U_CONNECTED:
     Serial.println("Connected back!");
     for (int i = 0; i < SHADES; i++) {
-      if (!shades[i].isSynced()) {
-        Serial.println("sending sync");
-        ARiF.sendShadeUnsynced(shadeIDs[i]);
+      if (shades[i].isSynced()) {
+        ARiF.sendShadeSynced(shadeIDs[i]);
         ARiF.sendShadeTilt(shadeIDs[i], shades[i].getTilt());
+        ARiF.sendShadePosition(shadeIDs[i], shades[i].getCurrentPosition());
+      } else {
+        ARiF.sendShadeUnsynced(shadeIDs[i]);
       }
     }
     break;

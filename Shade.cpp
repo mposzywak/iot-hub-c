@@ -176,7 +176,7 @@ byte Shade::update() {
         Serial.println("Shade synced");
       } 
     } else { /* synced */
-      if (position > desiredPosition) { 
+      if (position > desiredPosition) { /* need to move up */
         if (!movingUp)
           upToPosition(desiredPosition); /* in this case the argument doesn't change anything as the desiredPosition has already been set */
         position--;
@@ -187,7 +187,7 @@ byte Shade::update() {
         this->stop();
         setTiltFromUp();
       }
-      if (position < desiredPosition) {
+      if (position < desiredPosition) { /* need to move down */
         if (!movingDown)
           downToPosition(desiredPosition); /* in this case the argument doesn't change anything as the desiredPosition has already been set */
         position++;
@@ -384,32 +384,68 @@ void Shade::timeRun(struct t *t) {
 }
 
 void Shade::setTilt(byte tilt) {
+  byte oldTilt;
+  oldTilt = desiredTilt;
   desiredTilt = tilt;
+  if (!this->isMoving() && (oldTilt != desiredTilt)) {
+    Serial.println("Shade not moving. Triggering tilt change");
+    if        (oldTilt == TILT_F_CLOSED && desiredTilt == TILT_F_CLOSED) {
+      /* nothing */
+    } else if (oldTilt == TILT_F_CLOSED && desiredTilt == TILT_H_CLOSED) {
+      tiltRun.tTimeout = TILT_HALF_MOVE;
+      tiltDirection = false;
+      timeRun(&waitBeforeTilt);
+    } else if (oldTilt == TILT_F_CLOSED && desiredTilt == TILT_F_OPEN) {
+      tiltRun.tTimeout = TILT_FULL_MOVE;
+      tiltDirection = false;
+      timeRun(&waitBeforeTilt);
+    } else if (oldTilt == TILT_H_CLOSED && desiredTilt == TILT_F_CLOSED) {
+      tiltRun.tTimeout = TILT_HALF_MOVE;
+      tiltDirection = true;
+      timeRun(&waitBeforeTilt);
+    } else if (oldTilt == TILT_H_CLOSED && desiredTilt == TILT_H_CLOSED) {
+      /* nothing */
+    } else if (oldTilt == TILT_H_CLOSED && desiredTilt == TILT_F_OPEN) {
+      tiltRun.tTimeout = TILT_HALF_MOVE;
+      tiltDirection = false;
+      timeRun(&waitBeforeTilt);
+    } else if (oldTilt == TILT_F_OPEN && desiredTilt == TILT_F_CLOSED) {
+      tiltRun.tTimeout = TILT_FULL_MOVE;
+      tiltDirection = true;
+      timeRun(&waitBeforeTilt);
+    } else if (oldTilt == TILT_F_OPEN && desiredTilt == TILT_H_CLOSED) {
+      tiltRun.tTimeout = TILT_HALF_MOVE;
+      tiltDirection = true;
+      timeRun(&waitBeforeTilt);
+    } else if (oldTilt == TILT_F_OPEN && desiredTilt == TILT_F_OPEN) {
+      /* nothing */
+    }
+  }
 }
 
 void Shade::setTiltFromUp() {
-  if (desiredTilt == TILT_F_CLOSED) {        /* move 1000ms down */
-    tiltRun.tTimeout = 1000;
+  if (desiredTilt == TILT_F_OPEN) {        /* move 1000ms down */
+    tiltRun.tTimeout = TILT_FULL_MOVE;
     tiltDirection = false;
     timeRun(&waitBeforeTilt);
   } else if (desiredTilt == TILT_H_CLOSED) { /* move 500ms down */
-    tiltRun.tTimeout = 500;
+    tiltRun.tTimeout = TILT_HALF_MOVE;
     tiltDirection = false;
     timeRun(&waitBeforeTilt);
-  } else if (desiredTilt == TILT_F_OPEN) {   /* do nothing */
+  } else if (desiredTilt == TILT_F_CLOSED) {   /* do nothing */
     
   }
 }
 
 void Shade::setTiltFromDown() {
-  if (desiredTilt == TILT_F_CLOSED) {        /* do nothing */
+  if (desiredTilt == TILT_F_OPEN) {        /* do nothing */
     
   } else if (desiredTilt == TILT_H_CLOSED) { /* move 500ms up */
-    tiltRun.tTimeout = 500;
+    tiltRun.tTimeout = TILT_HALF_MOVE;
     tiltDirection = true;
     timeRun(&waitBeforeTilt);
-  } else if (desiredTilt == TILT_F_OPEN) {   /* move 1000ms up */
-    tiltRun.tTimeout = 1000;
+  } else if (desiredTilt == TILT_F_CLOSED) {   /* move 1000ms up */
+    tiltRun.tTimeout = TILT_FULL_MOVE;
     tiltDirection = true;
     timeRun(&waitBeforeTilt);
   }
