@@ -166,7 +166,7 @@ for (int i = 0; i < SHADES; i++) {
   //byte pos = shades[i].update();
   if (shades[i].update() <= 100) {
     Serial.println("Sending 1 shade position");
-    ARiF.sendShadePosition(shadeIDs[i], shades[i].getCurrentPosition());
+    //ARiF.sendShadePosition(shadeIDs[i], shades[i].getCurrentPosition());
   }
     
   if (shades[i].isUpPressed()) {
@@ -186,9 +186,14 @@ for (int i = 0; i < SHADES; i++) {
     }
     measure = true;
   }
+
+  if (shades[i].justStoppedTilt()) {
+    ARiF.sendShadeTilt(shadeIDs[i], shades[i].getTilt());
+  }
   
   if (shades[i].justStopped()) {
     ARiF.sendShadeStop(shadeIDs[i]);
+    ARiF.sendShadePosition(shadeIDs[i], shades[i].getCurrentPosition());
   }
   if (shades[i].justStartedDown()) {
     ARiF.sendShadeDown(shadeIDs[i]);
@@ -253,6 +258,14 @@ switch (ret) {
       if (shades[i].getDevID() == lastDevID) shades[i].setTilt(ARiF.getLastShadeTilt());
     }
     break;
+  case CMD_SHADESTOP:
+    Serial.print("ShadeSTOP received: ");
+    lastDevID = ARiF.getLastDevID();
+    //Serial.println(s.getDevID()); // why s.toPosition() doesn't work??
+    for (int i = 0; i < SHADES; i++) {
+      if (shades[i].getDevID() == lastDevID) shades[i].stop();
+    }
+    break;  
   case CMD_LIGHTON:
     Serial.print("Received lightON command from: ");
     Serial.print(ARiF.getLastDevID());
