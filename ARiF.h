@@ -31,6 +31,7 @@
 #define CMD_SHADETILT 5
 #define CMD_SHADEUP   6
 #define CMD_SHADEDOWN 7
+#define CMD_SHADESTOP 8
 #define CMD_UNKNOWN   10
 
 /* values returned by update() other than the CMDs above */

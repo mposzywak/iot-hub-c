@@ -39,6 +39,7 @@ void Shade::init(byte shadeID) {
   movementRange = DEFAULT_RANGE;
   synced = false;
   justStoppedVar = false;
+  justStoppedTiltVar = false;
 
   /* filling in the section borders with the border seconds of the movement range */
   sections[0] = 0;
@@ -135,7 +136,7 @@ byte Shade::update() {
   if (timeCheck(&tiltRun)) {
     Serial.println("Stopping tilt movement");
     tiltMovement = false;
-    this->stop();
+    this->tiltStop();
   }
   
   if (timeCheck(&updateExec)) { 
@@ -288,6 +289,16 @@ void Shade::stop() {
   desiredPosition = position;
 }
 
+void Shade::tiltStop() {
+  digitalWrite(outPinUp, Shade::low);
+  digitalWrite(outPinDown, Shade::low);
+  outPinUpState = Shade::low;
+  outPinDownState = Shade::low;
+  justStoppedTiltVar = true;
+  tiltMovement = false;
+  desiredPosition = position;
+}
+
 bool Shade::isMoving() {
   if (outPinDownState == Shade::high || outPinUpState == Shade::high) {
     return true;
@@ -315,6 +326,15 @@ bool Shade::isMovingDown() {
 bool Shade::justStopped() {
   if (justStoppedVar) {
     justStoppedVar = false;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool Shade::justStoppedTilt() {
+  if (justStoppedTiltVar) {
+    justStoppedTiltVar = false;
     return true;
   } else {
     return false;

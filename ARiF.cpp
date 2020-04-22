@@ -156,6 +156,12 @@ static byte ARiFClass::update() {
         client.stop();
         return CMD_SHADETILT;
         break;
+      case CMD_SHADESTOP:
+        client.println(F(HTTP_200_OK));
+        client.println();
+        client.stop();
+        return CMD_SHADESTOP;
+        break;
       case CMD_UNKNOWN:
         client.println(F(HTTP_500_Error));
         client.stop();
@@ -214,6 +220,7 @@ static int ARiFClass::getValue(char *buff, int value) {
     if (strstr(buff, "cmd=shadeTILT")) return CMD_SHADETILT;
     if (strstr(buff, "cmd=shadeUP")) return CMD_SHADEUP;
     if (strstr(buff, "cmd=shadeDOWN")) return CMD_SHADEDOWN;
+    if (strstr(buff, "cmd=shadeSTOP")) return CMD_SHADESTOP;
     return CMD_UNKNOWN;
   }
 }

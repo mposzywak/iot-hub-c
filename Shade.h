@@ -78,6 +78,7 @@ class Shade {
     bool justStoppedVar;
     bool justStartedUpVar;
     bool justStartedDownVar;
+    bool justStoppedTiltVar;
 
     byte oldSec;
 
@@ -163,6 +164,9 @@ class Shade {
   /* stops the shade */
   void stop();
 
+  /* stops the shade after tilt movement */
+  void tiltStop();
+
   /* returns true if the shade is currently moving in either direction */
   bool isMoving();
   bool isMovingUp();
@@ -172,6 +176,7 @@ class Shade {
   bool justStopped();
   bool justStartedUp();
   bool justStartedDown();
+  bool justStoppedTilt();
 
   /* sets the desired position of the shade to a given value */
   void toPosition(byte position);
