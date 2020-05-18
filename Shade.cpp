@@ -164,7 +164,7 @@ byte Shade::update() {
       } else if (movingUp && position == 0) {
         synced = true;
         this->stop();
-        //setTiltFromUp();
+        tiltStop(); /* this is just to report the state of the tilt if up move is used to sync the shade */
         Serial.println("Shade synced");
       }
       if (movingDown && position < movementRange) {
@@ -173,7 +173,7 @@ byte Shade::update() {
       } else if (movingDown && position == movementRange) {
         synced = true;
         this->stop();
-        //setTiltFromDown();
+        setTiltFromDown(); /* this is to report the state of the shade once synced */
         Serial.println("Shade synced");
       } 
     } else { /* synced */
@@ -186,7 +186,10 @@ byte Shade::update() {
       } else if (movingUp && position == desiredPosition) {
         Serial.println("Reached pos by moving Up");
         this->stop();
-        setTiltFromUp();
+        if (position != 0) /* this condition is added in order to prevent tilt movement when the shade is fully open */
+          setTiltFromUp();
+        else
+          tiltStop();
       }
       if (position < desiredPosition) { /* need to move down */
         if (!movingDown)
@@ -407,6 +410,10 @@ void Shade::setTilt(byte tilt) {
   byte oldTilt;
   oldTilt = desiredTilt;
   desiredTilt = tilt;
+  if (position == 0 && (oldTilt != desiredTilt) && !this->isMoving()) { /* for condition when shade is at the top - don't need tilt move */
+    this->tiltStop();
+    return;
+  } 
   if (!this->isMoving() && (oldTilt != desiredTilt)) {
     Serial.println("Shade not moving. Triggering tilt change");
     if        (oldTilt == TILT_F_CLOSED && desiredTilt == TILT_F_CLOSED) {
