@@ -168,23 +168,38 @@ for (int i = 0; i < SHADES; i++) {
     Serial.println("Sending 1 shade position");
     //ARiF.sendShadePosition(shadeIDs[i], shades[i].getCurrentPosition());
   }
-    
-  if (shades[i].isUpPressed()) {
+
+  byte upPressResult = shades[i].isUpPressed();
+  byte downPressResult = shades[i].isDownPressed();
+  
+  if (upPressResult == PHY_MOMENTARY_PRESS) {
     if (shades[i].isMoving()) {
-      shades[i].stop();
+      shades[i].stopWithTilt();
+    } else {
+      shades[i].toggleTiltUp();
+    }
+    measure = true;
+  } else if (upPressResult == PHY_PRESS_MORE_THAN_2SEC) {
+    if (shades[i].isMoving()) {
+      shades[i].stopWithTilt();
     } else {
       shades[i].up();
     }
-    measure = true;
   }
 
-  if (shades[i].isDownPressed()) {
+  if (downPressResult == PHY_MOMENTARY_PRESS) {
     if (shades[i].isMoving()) {
-      shades[i].stop();
+      shades[i].stopWithTilt();
+    } else {
+      shades[i].toggleTiltDown();
+    }
+    measure = true;
+  } else if (downPressResult == PHY_PRESS_MORE_THAN_2SEC) {
+    if (shades[i].isMoving()) {
+      shades[i].stopWithTilt();
     } else {
       shades[i].down();
     }
-    measure = true;
   }
 
   if (shades[i].justStoppedTilt()) {
