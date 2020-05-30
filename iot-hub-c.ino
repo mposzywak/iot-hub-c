@@ -278,7 +278,9 @@ switch (ret) {
     lastDevID = ARiF.getLastDevID();
     //Serial.println(s.getDevID()); // why s.toPosition() doesn't work??
     for (int i = 0; i < SHADES; i++) {
-      if (shades[i].getDevID() == lastDevID) shades[i].stop();
+      if (shades[i].getDevID() == lastDevID) {
+        shades[i].stopWithTilt();
+      }
     }
     break;  
   case CMD_LIGHTON:

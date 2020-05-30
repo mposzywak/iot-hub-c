@@ -62,8 +62,8 @@ void Shade::init(byte shadeID) {
   tiltRun = { 0, 500, true };
   waitBeforeTilt = { 0, 500, true };
 
-  upButtonHold = { 0, 2000, true };
-  downButtonHold = { 0, 2000, true };
+  upButtonHold = { 0, 1000, true };
+  downButtonHold = { 0, 1000, true };
 
   desiredTilt = TILT_H_CLOSED;
   tiltMovement = false;
