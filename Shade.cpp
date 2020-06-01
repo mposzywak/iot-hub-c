@@ -62,44 +62,63 @@ void Shade::init(byte shadeID) {
   tiltRun = { 0, 500, true };
   waitBeforeTilt = { 0, 500, true };
 
+  upButtonHold = { 0, 1000, true };
+  downButtonHold = { 0, 1000, true };
+
   desiredTilt = TILT_H_CLOSED;
   tiltMovement = false;
 }
 
-bool Shade::isUpPressed() {
+byte Shade::isUpPressed() {
   inPinUpState = digitalRead(inPinUp);
   if (inPinUpState == HIGH) { /* Button pressed and held */
+    if (!inPinUpPressed) { /* at the moment of pressing start counting time */
+      timeRun(&upButtonHold);
+    }
     inPinUpPressed = true;
     delay(10); // this delay here was placed in order for the press button result to be predictable
-    return false;
+    return PHY_NO_PRESS;
   } else {
-    if (inPinUpPressed) {
+    if (inPinUpPressed) { /* Button is released */
       /* EXECUTED ON BUTTON RELEASE - START */
 
       /* EXECUTED ON BUTTON RELEASE - END */
+      if (timeCheck(&upButtonHold)) {
+        Serial.println("Held up above 2 sec");
+        inPinUpPressed = false;
+        return PHY_PRESS_MORE_THAN_2SEC;
+      }
       inPinUpPressed = false;
-      return true;
+      return PHY_MOMENTARY_PRESS;
     } else {
-      return false;
+      return PHY_NO_PRESS;
     }
   }
 }
 
-bool Shade::isDownPressed() {
+byte Shade::isDownPressed() {
   inPinDownState = digitalRead(inPinDown);
   if (inPinDownState == HIGH) { /* Button pressed and held */
+    if (!inPinDownPressed) { /* at the moment of pressing start counting time */
+      timeRun(&downButtonHold);
+    }
     inPinDownPressed = true;
     delay(10); // this delay here was placed in order for the press button result to be predictable
-    return false;
+    return PHY_NO_PRESS;
   } else {
-    if (inPinDownPressed) {
+    if (inPinDownPressed) { /* Button is released */
       /* EXECUTED ON BUTTON RELEASE - START */
 
       /* EXECUTED ON BUTTON RELEASE - END */
+      if (timeCheck(&downButtonHold)) {
+        Serial.println("Held down above 2 sec");
+        inPinDownPressed = false;
+        return PHY_PRESS_MORE_THAN_2SEC;
+      }
       inPinDownPressed = false;
-      return true;
+      return PHY_MOMENTARY_PRESS;
     } else {
-      return false;
+      return PHY_NO_PRESS;
     }
   }
 }
@@ -145,17 +164,6 @@ byte Shade::update() {
     /* CODE EXECUTED EVERY SECOND - START */    
     bool movingUp = this->isMovingUp();
     bool movingDown = this->isMovingDown();
-    /*if (shadeID == 1) {
-      Serial.print("position: ");
-      Serial.print(position);
-      Serial.print(" desired position: ");
-      Serial.print(desiredPosition);
-      Serial.print(" down: ");
-      Serial.print(movingDown);
-      Serial.print(" up: ");
-      Serial.println(movingUp);
-      Serial.println(tiltMovement);
-    }*/
  
     if (!synced) { /* not synced */
       if (movingUp && position > 0) {
@@ -182,7 +190,6 @@ byte Shade::update() {
           upToPosition(desiredPosition); /* in this case the argument doesn't change anything as the desiredPosition has already been set */
         position--;
         positionReported = false;
-        Serial.println("setting reported false");
       } else if (movingUp && position == desiredPosition) {
         Serial.println("Reached pos by moving Up");
         this->stop();
@@ -196,7 +203,6 @@ byte Shade::update() {
           downToPosition(desiredPosition); /* in this case the argument doesn't change anything as the desiredPosition has already been set */
         position++;
         positionReported = false;
-        Serial.println("setting reported false");
       } else if (movingDown && position == desiredPosition) {
         Serial.println("Reached pos by moving Down");
         this->stop();
@@ -206,23 +212,18 @@ byte Shade::update() {
     }
     timeRun(&updateExec);
     if (position == sections[0] && positionReported == false && synced) {
-      Serial.println("setting reported true");
       reachedPosition = 0;
       return 0;
     } else if (position == sections[1] && positionReported == false && synced) {
-      Serial.println("setting reported true");
       reachedPosition = 25;
       return 25;
     } else if (position == sections[2] && positionReported == false && synced) {
-      Serial.println("setting reported true");
       reachedPosition = 50;
       return 50;
     } else if (position == sections[3] && positionReported == false && synced) {
-      Serial.println("setting reported true");
       reachedPosition = 75;
       return 75; 
     } else if (position == sections[4] && positionReported == false && synced) {
-      Serial.println("setting reported true");
       reachedPosition = 100;
       return 100;
     } else {
@@ -290,6 +291,21 @@ void Shade::stop() {
   justStoppedVar = true;
   tiltMovement = false;
   desiredPosition = position;
+}
+
+void Shade::stopWithTilt() {
+  bool upMove = false;
+  bool downMove = false;
+  if (isMovingUp())
+    upMove = true;
+  if (isMovingDown())
+    downMove = true;
+  stop();
+  if (upMove)
+    setTiltFromUp();
+  if (downMove)
+    setTiltFromDown();
+    
 }
 
 void Shade::tiltStop() {
@@ -476,4 +492,24 @@ void Shade::setTiltFromDown() {
     tiltDirection = true;
     timeRun(&waitBeforeTilt);
   }
+}
+
+void Shade::toggleTiltUp() {
+  if (desiredTilt == TILT_F_OPEN) {
+    setTilt(TILT_H_CLOSED);
+  } else if (desiredTilt == TILT_H_CLOSED) {
+    setTilt(TILT_F_CLOSED);
+  } else if (desiredTilt == TILT_F_CLOSED) {
+    setTilt(TILT_F_OPEN);
+  }
+}
+
+void Shade::toggleTiltDown() {
+  if (desiredTilt == TILT_F_OPEN) {
+    setTilt(TILT_F_CLOSED);
+  } else if (desiredTilt == TILT_F_CLOSED) {
+    setTilt(TILT_H_CLOSED);
+  } else if (desiredTilt == TILT_H_CLOSED) {
+    setTilt(TILT_F_OPEN);
+  } 
 }

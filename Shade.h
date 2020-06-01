@@ -24,6 +24,11 @@
 /* default tilt range movement length in miliseconds */
 #define DEFAULT_TILT_RANGE 1000
 
+/* types of physical button press */
+#define PHY_NO_PRESS                0
+#define PHY_MOMENTARY_PRESS         1
+#define PHY_PRESS_MORE_THAN_2SEC    2
+
 /*
  * Class for handling of the Shades. Each object represents one shade composed of 4 pins (2 inputs for both directions and 2 outputs for both directions)
  */
@@ -122,6 +127,10 @@ class Shade {
     /* holds time that the shade should wait after it stops moveing to make the tilting move */
     t waitBeforeTilt;
 
+    /* holds timer for button pressing - for measurement for how long the physical button is held pressed */
+    t upButtonHold;
+    t downButtonHold;
+
     /* functions to control time based execution */
     bool Shade::timeCheck(struct t *t );
     void Shade::timeRun(struct t *t);
@@ -147,10 +156,10 @@ class Shade {
   void init(byte shadeID);
 
   /* returns true if the "up" button is pressed */
-  bool isUpPressed();
+  byte isUpPressed();
 
   /* returns true if the "down" button is pressed */
-  bool isDownPressed();
+  byte isDownPressed();
 
   /* function to be executed on every loop. Updates timers */
   byte update();
@@ -163,6 +172,11 @@ class Shade {
 
   /* stops the shade */
   void stop();
+
+  /* movement stop function, but includes tilt movement after - to be executed if the specific stop order has been received
+   *  either form physical button or ARiF.
+   */
+  void stopWithTilt();
 
   /* stops the shade after tilt movement */
   void tiltStop();
@@ -195,6 +209,12 @@ class Shade {
 
   /* set the desired tilt of the shade */
   void setTilt(byte tilt);
+
+  /* toggle tilt - move the tilt in up (make it more open). If fully open - move to fully close */
+  void Shade::toggleTiltUp();
+
+  /* toggle tilt - move the tilt in down (make it more close). If fully closed - move to fully open */
+  void Shade::toggleTiltDown();
 
   
 };
