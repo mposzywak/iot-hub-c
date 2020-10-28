@@ -17,8 +17,8 @@ void Shade::init(byte shadeID) {
   this->outPinDown = Settings::getShadeOutPinDown(shadeID);
   this->inPinUp = Settings::getShadeInPinUp(shadeID);
   this->inPinDown = Settings::getShadeInPinDown(shadeID);
-  pinMode(inPinUp, INPUT);
-  pinMode(inPinDown, INPUT);
+  Settings::setInPinMode(inPinUp);
+  Settings::setInPinMode(inPinDown);
   inPinUpState    = LOW;
   inPinDownState  = LOW;
   inPinUpPressed    = false;
@@ -29,8 +29,14 @@ void Shade::init(byte shadeID) {
 
   Shade::low = Settings::getLow();
   Shade::high = Settings::getHigh();
-  digitalWrite(outPinUp, Shade::low);
-  digitalWrite(outPinDown, Shade::low);
+  //digitalWrite(outPinUp, Shade::low);
+  //digitalWrite(outPinDown, Shade::low);
+    Serial.print("Setting pin: ");
+    Serial.print(outPinUp);
+    Serial.print(" value: ");
+    Serial.println(Shade::low);
+  Settings::setOutputPinValue(outPinUp, Shade::low);
+  Settings::setOutputPinValue(outPinDown, Shade::low);
   outPinUpState = Shade::low;
   outPinDownState = Shade::low;
 
@@ -70,7 +76,7 @@ void Shade::init(byte shadeID) {
 }
 
 byte Shade::isUpPressed() {
-  inPinUpState = digitalRead(inPinUp);
+  inPinUpState = Settings::getInputPinValue(inPinUp);
   if (inPinUpState == HIGH) { /* Button pressed and held */
     if (!inPinUpPressed) { /* at the moment of pressing start counting time */
       timeRun(&upButtonHold);
@@ -97,7 +103,7 @@ byte Shade::isUpPressed() {
 }
 
 byte Shade::isDownPressed() {
-  inPinDownState = digitalRead(inPinDown);
+  inPinDownState = Settings::getInputPinValue(inPinDown);
   if (inPinDownState == HIGH) { /* Button pressed and held */
     if (!inPinDownPressed) { /* at the moment of pressing start counting time */
       timeRun(&downButtonHold);
@@ -124,16 +130,18 @@ byte Shade::isDownPressed() {
 }
 
 byte Shade::update() {
-  int sec = Controllino_GetSecond();
+  //int sec = Controllino_GetSecond();
 
   if (timeCheck(&dir_swap)) {
     Serial.println("Executing delayed change *");
     Serial.println(millis());
     if (swapDirection == true) {
-      digitalWrite(outPinUp, Shade::high);
+      //digitalWrite(outPinUp, Shade::high);
+      Settings::setOutputPinValue(outPinUp, Shade::high);
       outPinUpState = Shade::high;
     } else { /* swapDirection == false */
-      digitalWrite(outPinDown, Shade::high);
+      //digitalWrite(outPinDown, Shade::high);
+      Settings::setOutputPinValue(outPinDown, Shade::high);
       outPinDownState = Shade::high;
     }
   }
@@ -143,10 +151,12 @@ byte Shade::update() {
     tiltMovement = true;
     Serial.println("Starting tilt movement");
     if (tiltDirection == true) {
-      digitalWrite(outPinUp, Shade::high);
+      //digitalWrite(outPinUp, Shade::high);
+      Settings::setOutputPinValue(outPinUp, Shade::high);
       //outPinUpState = Shade::high;
     } else { /* tiltDirection == false */
-      digitalWrite(outPinDown, Shade::high);
+      //digitalWrite(outPinDown, Shade::high);
+      Settings::setOutputPinValue(outPinDown, Shade::high);
       //outPinDownState = Shade::high;
     }
     timeRun(&tiltRun);
@@ -248,12 +258,14 @@ void Shade::down() {
 }
 
 void Shade::upToPosition(byte dp) {
-  digitalWrite(outPinDown, Shade::low);
+  //digitalWrite(outPinDown, Shade::low);
+  Settings::setOutputPinValue(outPinDown, Shade::low);
   if (outPinDownState == Shade::high) { /* on condition shade was moving in the opposite direction */
     timeRun(&dir_swap);
     swapDirection = true;
   } else { /* on condition shade was already moving in the desired direction or stopped */
-    digitalWrite(outPinUp, Shade::high);
+    //digitalWrite(outPinUp, Shade::high);
+    Settings::setOutputPinValue(outPinUp, Shade::high);
     outPinUpState = Shade::high;
   }
   outPinDownState = Shade::low;
@@ -266,13 +278,15 @@ void Shade::upToPosition(byte dp) {
 }
 
 void Shade::downToPosition(byte dp) {
-  digitalWrite(outPinUp, Shade::low);
+  //digitalWrite(outPinUp, Shade::low);
+  Settings::setOutputPinValue(outPinUp, Shade::low);
   if (outPinUpState == Shade::high) { /* on condition shade was moving in the opposite direction */
     timeRun(&dir_swap);
     swapDirection = false;
   } else { /* on condition shade was already moving in the desired direction or stopped */
     digitalWrite(outPinDown, Shade::high);
-    outPinDownState = Shade::high;
+    Settings::setOutputPinValue(outPinDown, Shade::high);
+    //outPinDownState = Shade::high;
   }
   outPinUpState = Shade::low;
   if (!synced) {
@@ -284,8 +298,10 @@ void Shade::downToPosition(byte dp) {
 }
 
 void Shade::stop() {
-  digitalWrite(outPinUp, Shade::low);
-  digitalWrite(outPinDown, Shade::low);
+  //digitalWrite(outPinUp, Shade::low);
+  //digitalWrite(outPinDown, Shade::low);
+  Settings::setOutputPinValue(outPinUp, Shade::low);
+  Settings::setOutputPinValue(outPinDown, Shade::low);
   outPinUpState = Shade::low;
   outPinDownState = Shade::low;
   justStoppedVar = true;
@@ -309,8 +325,10 @@ void Shade::stopWithTilt() {
 }
 
 void Shade::tiltStop() {
-  digitalWrite(outPinUp, Shade::low);
-  digitalWrite(outPinDown, Shade::low);
+  //digitalWrite(outPinUp, Shade::low);
+  //digitalWrite(outPinDown, Shade::low);
+  Settings::setOutputPinValue(outPinUp, Shade::low);
+  Settings::setOutputPinValue(outPinDown, Shade::low);
   outPinUpState = Shade::low;
   outPinDownState = Shade::low;
   justStoppedTiltVar = true;
@@ -431,8 +449,8 @@ void Shade::setTilt(byte tilt) {
     return;
   } 
   if (!this->isMoving() && (oldTilt != desiredTilt)) {
-    Serial.println("Shade not moving. Triggering tilt change");
-    if        (oldTilt == TILT_F_CLOSED && desiredTilt == TILT_F_CLOSED) {
+    //Serial.println("Shade not moving. Triggering tilt change");
+    if (oldTilt == TILT_F_CLOSED && desiredTilt == TILT_F_CLOSED) {
       /* nothing */
     } else if (oldTilt == TILT_F_CLOSED && desiredTilt == TILT_H_CLOSED) {
       tiltRun.tTimeout = TILT_HALF_MOVE;
