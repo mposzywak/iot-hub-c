@@ -4,14 +4,14 @@
 #include <Ethernet.h>
 #include <EthernetUdp.h>
 #include <avr/pgmspace.h>
-#include <Controllino.h>
 #include <EEPROM.h>
 #include "Shade.h"
 #include "ARiF.h"
 #include "Settings.h"
 
 /*
-  CONTROLLINO - smarthouse test, Version 1.1.0
+
+  CONTROLLINO - smarthouse test, Version 1.1.0 
 
   Used to control outputs by inputs and provide a REST API like over network to that system.
   
@@ -29,16 +29,6 @@
 #define EEPROM_IDX_RASPYIP  3  // length 6
 #define EEPROM_IDX_NEXT     9
 
-/* number of pins in/out TODO: need to convert into MEGA/MAXI */
-#if defined(CONTROLLINO_MEGA)
-#define IN_PINS  21
-#define OUT_PINS 21
-#define SHADES   10
-#elif defined(CONTROLLINO_MAXI) 
-#define IN_PINS  12
-#define OUT_PINS 12
-#define SHADES   6
-#endif
 
 /* functional modes of the entire device */
 #define FUNC_LIGHTS 0
@@ -65,7 +55,7 @@ bool relaysNC = true;
 byte funcMode = FUNC_SHADES;
 
 /* MAC address used for initiall boot */
-byte mac[] = { 0x00, 0xAA, 0xBB, 0xC6, 0xA5, 0x58 };
+byte mac[] = { 0x00, 0xAA, 0xBB, 0xC6, 0xDD, 0x52 };
 
 /*
  * ------------------------
@@ -82,17 +72,6 @@ bool isRegistered = false;
 
 /* holds the IP of the Raspy/iot-gw */
 IPAddress iotGwIP;
-
-#if defined(CONTROLLINO_MEGA)
-
-byte shadeIDs[SHADES] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-
-#elif defined(CONTROLLINO_MAXI) 
-
-/* the shadeID array */
-byte shadeIDs[SHADES] = { 1, 2, 3, 4, 5, 6 };
-
-#endif
 
 
 /* initialize the shades */
@@ -113,16 +92,15 @@ void setup() {
 
   /* initialize the shades */
   for (int i = 0; i < SHADES; i++) {
-    shades[i].init(shadeIDs[i]);
+    shades[i].init(Settings::shadeIDs[i]);
   }
 
-  /* initialize RTC, no need to do that, Controllino should survive 2 weeks on internal battery */
-  Serial.println("initializing RTC clock... ");
-  Controllino_RTC_init(0);
-  //Controllino_SetTimeDate(7,4,11,19,11,00,45);
+  /* initialize various platform dependend settings */
+  Settings::initPlatform();
   
   /* get the registration data from EEPROM */
-  isRegistered = (bool) EEPROM.read(EEPROM_IDX_REG);
+  //isRegistered = (bool) EEPROM.read(EEPROM_IDX_REG);
+  isRegistered = false;
   if (isRegistered) {
     Serial.print("Arduino registered with ardID: ");
     ardID = EEPROM.read(EEPROM_IDX_ARDID);
@@ -203,18 +181,18 @@ for (int i = 0; i < SHADES; i++) {
   }
 
   if (shades[i].justStoppedTilt()) {
-    ARiF.sendShadeTilt(shadeIDs[i], shades[i].getTilt());
+    ARiF.sendShadeTilt(Settings::shadeIDs[i], shades[i].getTilt());
   }
   
   if (shades[i].justStopped()) {
-    ARiF.sendShadeStop(shadeIDs[i]);
-    ARiF.sendShadePosition(shadeIDs[i], shades[i].getCurrentPosition());
+    ARiF.sendShadeStop(Settings::shadeIDs[i]);
+    ARiF.sendShadePosition(Settings::shadeIDs[i], shades[i].getCurrentPosition());
   }
   if (shades[i].justStartedDown()) {
-    ARiF.sendShadeDown(shadeIDs[i]);
+    ARiF.sendShadeDown(Settings::shadeIDs[i]);
   }
   if (shades[i].justStartedUp()) {
-    ARiF.sendShadeUp(shadeIDs[i]);
+    ARiF.sendShadeUp(Settings::shadeIDs[i]);
   }
   
 }
@@ -226,11 +204,11 @@ switch (ret) {
     Serial.println("Connected back!");
     for (int i = 0; i < SHADES; i++) {
       if (shades[i].isSynced()) {
-        ARiF.sendShadeSynced(shadeIDs[i]);
-        ARiF.sendShadeTilt(shadeIDs[i], shades[i].getTilt());
-        ARiF.sendShadePosition(shadeIDs[i], shades[i].getCurrentPosition());
+        ARiF.sendShadeSynced(Settings::shadeIDs[i]);
+        ARiF.sendShadeTilt(Settings::shadeIDs[i], shades[i].getTilt());
+        ARiF.sendShadePosition(Settings::shadeIDs[i], shades[i].getCurrentPosition());
       } else {
-        ARiF.sendShadeUnsynced(shadeIDs[i]);
+        ARiF.sendShadeUnsynced(Settings::shadeIDs[i]);
       }
     }
     break;
