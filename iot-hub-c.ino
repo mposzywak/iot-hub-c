@@ -10,7 +10,8 @@
 #include "Settings.h"
 
 /*
-  Arduino - smarthouse test, Version 01.00
+
+  CONTROLLINO - smarthouse test, Version 1.1.0 
 
   Used to control outputs by inputs and provide a REST API like over network to that system.
   
