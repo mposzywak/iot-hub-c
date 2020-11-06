@@ -90,13 +90,19 @@ static byte ARiFClass::update() {
     }
 
     switch (getValue(buff, CMD)) {
-      case CMD_HEARTBEAT:      
-        client.println(F(HTTP_200_OK)); /* write 200 OK */
-        client.stop();                  /* send */
-        lastHeartbeat = 0;              /* reset the heartbeat timer */
-        if (isConnected == 0) {
-          isConnected = true;
-          return U_CONNECTED;
+      case CMD_HEARTBEAT:
+        if (isRegistered) {
+          client.println(F(HTTP_200_OK)); /* write 200 OK */
+          client.stop();                  /* send */
+          lastHeartbeat = 0;              /* reset the heartbeat timer */
+          if (isConnected == 0) {
+            isConnected = true;
+            return U_CONNECTED;
+          }
+        } else {
+          client.println(F(HTTP_403_Error)); /* write 403 because the unexpected HB */
+          client.stop();                  /* send */
+          Serial.println("Unexpected heartbeat received. Sending 403.");
         }
         break;
       case CMD_REGISTER:
@@ -173,7 +179,7 @@ static byte ARiFClass::update() {
     signalIPchange = false;
     return U_RASPYIPCHGD;
   }
-  
+
   return U_NOTHING;
 }
 
@@ -239,7 +245,7 @@ static void ARiFClass::sendShadeStatus(byte devID, byte dataType, byte value) {
   if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
     Serial.print("devID: ");
     Serial.print(devID);
-    Serial.print(" sending to "); // to be removed 
+    Serial.print(" sending to "); // to be removed
     Serial.print(ARiFClient.remoteIP()); // to be removed
     // Make a HTTP request:
     ARiFClient.print("POST /?devID=");
@@ -252,8 +258,8 @@ static void ARiFClass::sendShadeStatus(byte devID, byte dataType, byte value) {
       ARiFClient.print(raspyID);
     } else {
       if (raspyID >= 10 < 100) {
-      ARiFClient.print("0");
-      ARiFClient.print(raspyID);
+        ARiFClient.print("0");
+        ARiFClient.print(raspyID);
       } else {
         ARiFClient.print(raspyID);
       }
@@ -295,7 +301,7 @@ static void ARiFClass::sendShadeStatus(byte devID, byte dataType, byte value) {
         Serial.println(" true. ");
       }
     }
-    
+
     ARiFClient.println("Host: raspy");
     ARiFClient.println("Connection: close");
     ARiFClient.println();
@@ -346,14 +352,14 @@ static byte ARiFClass::getArdID() {
 
 bool ARiFClass::timeCheck(struct t *t ) {
   if ((unsigned long)(millis() - t->tStart) > t->tTimeout) {
-    return true;    
+    return true;
   } else {
     return false;
   }
 }
 
 void ARiFClass::timeRun(struct t *t) {
-    t->tStart = millis();
+  t->tStart = millis();
 }
 
 byte ARiFClass::getLastDevID() {
@@ -366,4 +372,9 @@ byte ARiFClass::getLastShadePosition() {
 
 byte ARiFClass::getLastShadeTilt() {
   return lastShadeTilt;
+}
+
+void ARiFClass::deregister() {
+  isRegistered = false;
+  ardID = 0;
 }

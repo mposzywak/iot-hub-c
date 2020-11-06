@@ -8,6 +8,7 @@
 #include "Shade.h"
 #include "ARiF.h"
 #include "Settings.h"
+#include "WebGUI.h"
 
 /*
 
@@ -95,12 +96,17 @@ void setup() {
     shades[i].init(Settings::shadeIDs[i]);
   }
 
+  /* disable SD card on the Ethernet shield */
+  pinMode(4, OUTPUT);
+  digitalWrite(4, HIGH);
+
   /* initialize various platform dependend settings */
   Settings::initPlatform();
   
   /* get the registration data from EEPROM */
   //isRegistered = (bool) EEPROM.read(EEPROM_IDX_REG);
   isRegistered = false;
+  WebGUI.setInfoDeregistered();
   if (isRegistered) {
     Serial.print("Arduino registered with ardID: ");
     ardID = EEPROM.read(EEPROM_IDX_ARDID);
@@ -115,8 +121,11 @@ void setup() {
   } else {
     Serial.println("Not registered within any iot-gw");
     ARiF.begin(VER_SHD_1, mac);
+
   }
 
+
+  WebGUI.begin();
   /* uncomment below code to clear the registration bit in the the EEPROM manually */
   //EEPROM.write(EEPROM_IDX_REG, (byte) false);
   
@@ -197,6 +206,8 @@ for (int i = 0; i < SHADES; i++) {
   
 }
 
+WebGUI.update();
+
 byte ret = ARiF.update();
 byte lastDevID;
 switch (ret) {
@@ -216,6 +227,10 @@ switch (ret) {
     break;
   case CMD_REGISTER:
     Serial.println("Registered!");
+    ardID = ARiF.getArdID();
+    raspyID = ARiF.getRaspyID();
+    iotGwIP = ARiF.getRaspyIP();
+    WebGUI.setInfoRegistered(ardID, raspyID, iotGwIP);
     break;
   case CMD_SHADEUP:
     Serial.print("ShadeUP received for: ");

@@ -14,7 +14,7 @@
 
 #define HTTP_200_OK "HTTP/1.1 200 OK\nContent-Type: text/html\nConnnection: close\n\n"
 #define HTTP_500_Error "HTTP/1.1 500\nContent-Type: text/html\nConnnection: close\n\n"
-
+#define HTTP_403_Error "HTTP/1.1 403\nContent-Type: text/html\nConnnection: close\n\n"
 
 /* Shades version 1 with the shade position and tilt */
 #define VER_SHD_1   0
@@ -221,6 +221,9 @@ class ARiFClass {
 
     /* send information that the shade is not synced */
     static void sendShadeUnsynced(byte devID);
+
+    /* deregister this arduino */
+    static void deregister();
 
 };
 
