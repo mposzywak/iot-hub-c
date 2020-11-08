@@ -9,6 +9,7 @@ static bool registered;
 static byte ardID;
 static byte raspyID;
 static IPAddress raspyIP;
+static byte cmd;
 
 static void WebGUIClass::begin() {
   Serial.println("Starting WebGUI server");
@@ -16,6 +17,7 @@ static void WebGUIClass::begin() {
 }
 
 static byte WebGUIClass::update() {
+  cmd = CMD_WEBGUI_NOTHING;
   EthernetClient client = WebGUIServer.available();
   if (client) {
     Serial.print("WebGUI: HTTP Request received from: ");
@@ -34,9 +36,8 @@ static byte WebGUIClass::update() {
       /* AJAX query */
       Serial.println("AJAX call received");
       if (deregPressed(buff)) {
-        Serial.println("Deregistration button pressed");
-        ARiF.deregister();
         registered = false;
+        cmd = CMD_WEBGUI_DEREGISTER;
       }
       client.println(F(HTTP_200_OK_XML));
       sendXMResponse(client);
@@ -89,6 +90,8 @@ static byte WebGUIClass::update() {
     delay(1);      // give the web browser time to receive the data
     client.stop(); // close the connection
   }
+
+  return cmd;
 }
 
 static void WebGUIClass::setInfoRegistered(byte aID, byte rID, IPAddress rIP) {

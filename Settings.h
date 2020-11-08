@@ -1,5 +1,7 @@
 
 #include <Arduino.h>
+#include <EEPROM.h>
+#include <Ethernet.h>
 
 #ifndef SETTINGS_H_
 #define SETTINGS_H_
@@ -19,6 +21,13 @@
 #define OUT_PINS 28
 #define SHADES   14
 #endif
+
+/* indexes for EEPROM information holding */
+#define EEPROM_IDX_ARDID    0  // length 1
+#define EEPROM_IDX_RASPYID  1  // length 1
+#define EEPROM_IDX_REG      2  // length 1
+#define EEPROM_IDX_RASPYIP  3  // length 6
+#define EEPROM_IDX_NEXT     9
 
 class Settings {
   private:
@@ -69,6 +78,30 @@ class Settings {
 
     /* initialize the platform */
     static void Settings::initPlatform();
+
+    /*
+     * EEPROM Storage related functions
+     */
+
+    /* Get from the EEPROM the ARiF registration status*/
+    static bool Settings::EEPROMIsRegistered();
+
+    /* Get from the EEPROM the ardID value*/
+    static byte EEPROMGetArdID();
+
+    /* Get from the EEPROM the raspy value*/
+    static byte Settings::EEPROMGetRaspyID();
+
+    /* Get from the EEPROM the IP address of the raspy where this arduino is registered */
+    static void Settings::EEPROMGetRaspyIP(IPAddress addr);
+
+    /* Write 'deregister' value into the EEPROM */
+    static void Settings::EEPROMDeregister();
+
+    /* Write Raspy IP address into the EEPROM */
+    static void Settings::EEPROMSetRaspyIP(IPAddress addr);
 };
+
+extern Settings Platform;
 
 #endif

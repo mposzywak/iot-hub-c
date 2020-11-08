@@ -1,3 +1,4 @@
+
 #include "Settings.h"
 
 /* ----- Platform related defines - START ----- */
@@ -264,4 +265,28 @@ static void Settings::initPlatform() {
 #elif defined(ARDUINO_AVR_MEGA2560)
   /* nothing needed here */
 #endif
+}
+
+static bool Settings::EEPROMIsRegistered() {
+   return (bool) EEPROM.read(EEPROM_IDX_REG);
+}
+
+static void Settings::EEPROMGetRaspyIP(IPAddress addr) {
+  EEPROM.get(EEPROM_IDX_RASPYIP, addr);
+}
+
+static byte Settings::EEPROMGetRaspyID() {
+  return EEPROM.read(EEPROM_IDX_RASPYID);
+}
+
+static byte Settings::EEPROMGetArdID() {
+  return EEPROM.read(EEPROM_IDX_ARDID);
+}
+
+static void Settings::EEPROMDeregister() {
+  EEPROM.write(EEPROM_IDX_REG, (byte) false);
+}
+
+static void Settings::EEPROMSetRaspyIP(IPAddress addr) {
+  EEPROM.put(EEPROM_IDX_RASPYIP, addr);
 }

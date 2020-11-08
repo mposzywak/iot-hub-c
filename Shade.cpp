@@ -1,8 +1,8 @@
 #include "Shade.h"
 #include "Settings.h"
 
-byte Shade::low = Settings::getLow();
-byte Shade::high = Settings::getHigh();
+byte Shade::low = Platform.getLow();
+byte Shade::high = Platform.getHigh();
 
 
 
@@ -13,12 +13,12 @@ Shade::Shade() {
 
 void Shade::init(byte shadeID) {
   this->shadeID = shadeID;
-  this->outPinUp = Settings::getShadeOutPinUp(shadeID);
-  this->outPinDown = Settings::getShadeOutPinDown(shadeID);
-  this->inPinUp = Settings::getShadeInPinUp(shadeID);
-  this->inPinDown = Settings::getShadeInPinDown(shadeID);
-  Settings::setInPinMode(inPinUp);
-  Settings::setInPinMode(inPinDown);
+  this->outPinUp = Platform.getShadeOutPinUp(shadeID);
+  this->outPinDown = Platform.getShadeOutPinDown(shadeID);
+  this->inPinUp = Platform.getShadeInPinUp(shadeID);
+  this->inPinDown = Platform.getShadeInPinDown(shadeID);
+  Platform.setInPinMode(inPinUp);
+  Platform.setInPinMode(inPinDown);
   inPinUpState    = LOW;
   inPinDownState  = LOW;
   inPinUpPressed    = false;
@@ -27,16 +27,16 @@ void Shade::init(byte shadeID) {
   pinMode(outPinUp, OUTPUT);
   pinMode(outPinDown, OUTPUT);
 
-  Shade::low = Settings::getLow();
-  Shade::high = Settings::getHigh();
+  Shade::low = Platform.getLow();
+  Shade::high = Platform.getHigh();
   //digitalWrite(outPinUp, Shade::low);
   //digitalWrite(outPinDown, Shade::low);
     Serial.print("Setting pin: ");
     Serial.print(outPinUp);
     Serial.print(" value: ");
     Serial.println(Shade::low);
-  Settings::setOutputPinValue(outPinUp, Shade::low);
-  Settings::setOutputPinValue(outPinDown, Shade::low);
+  Platform.setOutputPinValue(outPinUp, Shade::low);
+  Platform.setOutputPinValue(outPinDown, Shade::low);
   outPinUpState = Shade::low;
   outPinDownState = Shade::low;
 
@@ -76,7 +76,7 @@ void Shade::init(byte shadeID) {
 }
 
 byte Shade::isUpPressed() {
-  inPinUpState = Settings::getInputPinValue(inPinUp);
+  inPinUpState = Platform.getInputPinValue(inPinUp);
   if (inPinUpState == HIGH) { /* Button pressed and held */
     if (!inPinUpPressed) { /* at the moment of pressing start counting time */
       timeRun(&upButtonHold);
@@ -103,7 +103,7 @@ byte Shade::isUpPressed() {
 }
 
 byte Shade::isDownPressed() {
-  inPinDownState = Settings::getInputPinValue(inPinDown);
+  inPinDownState = Platform.getInputPinValue(inPinDown);
   if (inPinDownState == HIGH) { /* Button pressed and held */
     if (!inPinDownPressed) { /* at the moment of pressing start counting time */
       timeRun(&downButtonHold);
@@ -137,11 +137,11 @@ byte Shade::update() {
     Serial.println(millis());
     if (swapDirection == true) {
       //digitalWrite(outPinUp, Shade::high);
-      Settings::setOutputPinValue(outPinUp, Shade::high);
+      Platform.setOutputPinValue(outPinUp, Shade::high);
       outPinUpState = Shade::high;
     } else { /* swapDirection == false */
       //digitalWrite(outPinDown, Shade::high);
-      Settings::setOutputPinValue(outPinDown, Shade::high);
+      Platform.setOutputPinValue(outPinDown, Shade::high);
       outPinDownState = Shade::high;
     }
   }
@@ -152,11 +152,11 @@ byte Shade::update() {
     Serial.println("Starting tilt movement");
     if (tiltDirection == true) {
       //digitalWrite(outPinUp, Shade::high);
-      Settings::setOutputPinValue(outPinUp, Shade::high);
+      Platform.setOutputPinValue(outPinUp, Shade::high);
       //outPinUpState = Shade::high;
     } else { /* tiltDirection == false */
       //digitalWrite(outPinDown, Shade::high);
-      Settings::setOutputPinValue(outPinDown, Shade::high);
+      Platform.setOutputPinValue(outPinDown, Shade::high);
       //outPinDownState = Shade::high;
     }
     timeRun(&tiltRun);
@@ -259,13 +259,13 @@ void Shade::down() {
 
 void Shade::upToPosition(byte dp) {
   //digitalWrite(outPinDown, Shade::low);
-  Settings::setOutputPinValue(outPinDown, Shade::low);
+  Platform.setOutputPinValue(outPinDown, Shade::low);
   if (outPinDownState == Shade::high) { /* on condition shade was moving in the opposite direction */
     timeRun(&dir_swap);
     swapDirection = true;
   } else { /* on condition shade was already moving in the desired direction or stopped */
     //digitalWrite(outPinUp, Shade::high);
-    Settings::setOutputPinValue(outPinUp, Shade::high);
+    Platform.setOutputPinValue(outPinUp, Shade::high);
     outPinUpState = Shade::high;
   }
   outPinDownState = Shade::low;
@@ -279,13 +279,13 @@ void Shade::upToPosition(byte dp) {
 
 void Shade::downToPosition(byte dp) {
   //digitalWrite(outPinUp, Shade::low);
-  Settings::setOutputPinValue(outPinUp, Shade::low);
+  Platform.setOutputPinValue(outPinUp, Shade::low);
   if (outPinUpState == Shade::high) { /* on condition shade was moving in the opposite direction */
     timeRun(&dir_swap);
     swapDirection = false;
   } else { /* on condition shade was already moving in the desired direction or stopped */
     digitalWrite(outPinDown, Shade::high);
-    Settings::setOutputPinValue(outPinDown, Shade::high);
+    Platform.setOutputPinValue(outPinDown, Shade::high);
     //outPinDownState = Shade::high;
   }
   outPinUpState = Shade::low;
@@ -300,8 +300,8 @@ void Shade::downToPosition(byte dp) {
 void Shade::stop() {
   //digitalWrite(outPinUp, Shade::low);
   //digitalWrite(outPinDown, Shade::low);
-  Settings::setOutputPinValue(outPinUp, Shade::low);
-  Settings::setOutputPinValue(outPinDown, Shade::low);
+  Platform.setOutputPinValue(outPinUp, Shade::low);
+  Platform.setOutputPinValue(outPinDown, Shade::low);
   outPinUpState = Shade::low;
   outPinDownState = Shade::low;
   justStoppedVar = true;
@@ -327,8 +327,8 @@ void Shade::stopWithTilt() {
 void Shade::tiltStop() {
   //digitalWrite(outPinUp, Shade::low);
   //digitalWrite(outPinDown, Shade::low);
-  Settings::setOutputPinValue(outPinUp, Shade::low);
-  Settings::setOutputPinValue(outPinDown, Shade::low);
+  Platform.setOutputPinValue(outPinUp, Shade::low);
+  Platform.setOutputPinValue(outPinDown, Shade::low);
   outPinUpState = Shade::low;
   outPinDownState = Shade::low;
   justStoppedTiltVar = true;

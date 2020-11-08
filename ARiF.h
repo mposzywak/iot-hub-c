@@ -5,12 +5,12 @@
 #ifndef ARIF_H_
 #define ARIF_H_
 
-#define ARiF_HTTP_PORT 32302
-#define ARiF_HTTP_BUFF 150
-#define ARiF_BEACON_INT 5
+#define ARiF_HTTP_PORT 32302                  /* port used as the listening port for ARiF connections and destination port for outgoing ones */
+#define ARiF_HTTP_BUFF 150                    /* maximum readable length of the incoming HTTP message */
+#define ARiF_BEACON_INT 5                     /* interval which the beacon is sent at (in seconds) */
 #define ARiF_BEACON_LENGTH 15
-#define ARiF_BEACON_PORT 5007
-#define ARiF_BEACON_STRING "/smarthouse/%d"
+#define ARiF_BEACON_PORT 5007                 /* Destination port where the beacon message is sent to */
+#define ARiF_BEACON_STRING "/smarthouse/%d"   /* String that we send in the beacon message */
 
 #define HTTP_200_OK "HTTP/1.1 200 OK\nContent-Type: text/html\nConnnection: close\n\n"
 #define HTTP_500_Error "HTTP/1.1 500\nContent-Type: text/html\nConnnection: close\n\n"

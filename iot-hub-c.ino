@@ -23,14 +23,6 @@
 */
 
 
-/* indexes for EEPROM information holding */
-#define EEPROM_IDX_ARDID    0  // length 1
-#define EEPROM_IDX_RASPYID  1  // length 1
-#define EEPROM_IDX_REG      2  // length 1
-#define EEPROM_IDX_RASPYIP  3  // length 6
-#define EEPROM_IDX_NEXT     9
-
-
 /* functional modes of the entire device */
 #define FUNC_LIGHTS 0
 #define FUNC_SHADES 1
@@ -101,27 +93,29 @@ void setup() {
   digitalWrite(4, HIGH);
 
   /* initialize various platform dependend settings */
-  Settings::initPlatform();
+  Platform.initPlatform();
   
   /* get the registration data from EEPROM */
-  //isRegistered = (bool) EEPROM.read(EEPROM_IDX_REG);
-  isRegistered = false;
-  WebGUI.setInfoDeregistered();
+  isRegistered = Platform.EEPROMIsRegistered();
+  //isRegistered = false;
+  
   if (isRegistered) {
     Serial.print("Arduino registered with ardID: ");
-    ardID = EEPROM.read(EEPROM_IDX_ARDID);
+    ardID = Platform.EEPROMGetArdID();
     Serial.println(ardID);
     Serial.print("Raspy IP: ");
-    EEPROM.get(EEPROM_IDX_RASPYIP, iotGwIP);
+    Platform.EEPROMGetRaspyIP(iotGwIP);
     Serial.println(iotGwIP);
     Serial.print("RaspyID: ");
-    raspyID = EEPROM.read(EEPROM_IDX_RASPYID);
+    raspyID = Platform.EEPROMGetRaspyID();
     Serial.println(raspyID);
     ARiF.begin(VER_SHD_1, mac, iotGwIP, ardID, raspyID);
+    WebGUI.setInfoRegistered(ardID, raspyID, iotGwIP);
+    
   } else {
     Serial.println("Not registered within any iot-gw");
     ARiF.begin(VER_SHD_1, mac);
-
+    WebGUI.setInfoDeregistered();
   }
 
 
@@ -203,10 +197,18 @@ for (int i = 0; i < SHADES; i++) {
   if (shades[i].justStartedUp()) {
     ARiF.sendShadeUp(Settings::shadeIDs[i]);
   }
-  
 }
 
-WebGUI.update();
+byte webGuiRet = WebGUI.update();
+switch (webGuiRet) {
+  case CMD_WEBGUI_DEREGISTER:
+    Serial.println("Deregister received (new)");
+    ARiF.deregister();
+    Platform.EEPROMDeregister();
+    break;
+  case CMD_WEBGUI_NOTHING:
+    break;
+}
 
 byte ret = ARiF.update();
 byte lastDevID;
@@ -349,7 +351,7 @@ bool checkIotGwIP(IPAddress ip) {
     return true;
   } else {
     iotGwIP = ip;
-    EEPROM.put(EEPROM_IDX_RASPYIP, iotGwIP);
+    Platform.EEPROMSetRaspyIP(ip);
     Serial.println("IP changed. Writing to EEPROM");
     return false;
   }
