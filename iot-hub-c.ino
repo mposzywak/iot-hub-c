@@ -104,7 +104,7 @@ void setup() {
     ardID = Platform.EEPROMGetArdID();
     Serial.println(ardID);
     Serial.print("Raspy IP: ");
-    Platform.EEPROMGetRaspyIP(iotGwIP);
+    iotGwIP = Platform.EEPROMGetRaspyIP(iotGwIP);
     Serial.println(iotGwIP);
     Serial.print("RaspyID: ");
     raspyID = Platform.EEPROMGetRaspyID();
@@ -133,9 +133,6 @@ void setup() {
  */
 void loop() {
 
-  /* execute every second */
-
-
   /* -- measurement code start -- */
   measure = false;
   TCCR1A = 0;
@@ -143,6 +140,7 @@ void loop() {
   uint16_t start = TCNT1;
   /* -- measurement code end -- */
 
+/* main shade loop */
 for (int i = 0; i < SHADES; i++) {
   //byte pos = shades[i].update();
   if (shades[i].update() <= 100) {
@@ -202,9 +200,14 @@ for (int i = 0; i < SHADES; i++) {
 byte webGuiRet = WebGUI.update();
 switch (webGuiRet) {
   case CMD_WEBGUI_DEREGISTER:
-    Serial.println("Deregister received (new)");
     ARiF.deregister();
     Platform.EEPROMDeregister();
+    break;
+  case CMD_WEBGUI_SET_V_LIGHTS:
+    Serial.println("Set Variant to lights");
+    break;
+  case CMD_WEBGUI_SET_V_SHADES:
+    Serial.println("Set Variant to shades");
     break;
   case CMD_WEBGUI_NOTHING:
     break;
@@ -233,6 +236,7 @@ switch (ret) {
     raspyID = ARiF.getRaspyID();
     iotGwIP = ARiF.getRaspyIP();
     WebGUI.setInfoRegistered(ardID, raspyID, iotGwIP);
+    Platform.EEPROMRegister(ardID, raspyID, iotGwIP);
     break;
   case CMD_SHADEUP:
     Serial.print("ShadeUP received for: ");

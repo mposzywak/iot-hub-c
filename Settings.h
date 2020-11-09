@@ -93,13 +93,16 @@ class Settings {
     static byte Settings::EEPROMGetRaspyID();
 
     /* Get from the EEPROM the IP address of the raspy where this arduino is registered */
-    static void Settings::EEPROMGetRaspyIP(IPAddress addr);
+    static IPAddress Settings::EEPROMGetRaspyIP(IPAddress addr);
 
     /* Write 'deregister' value into the EEPROM */
     static void Settings::EEPROMDeregister();
 
     /* Write Raspy IP address into the EEPROM */
     static void Settings::EEPROMSetRaspyIP(IPAddress addr);
+
+    /* Write all registration data into the EEPROM */
+    static void Settings::EEPROMRegister(byte ardID, byte raspyID, IPAddress addr);
 };
 
 extern Settings Platform;
