@@ -137,8 +137,8 @@ static void WebGUIClass::sendWebGUIHTML(EthernetClient client) {
   client.println("<html>");
   client.println("<head>");
   client.println("<title>Velen IoT System</title>");
-  client.println("<script type=\"text/javascript\" src=\"http://velen.tech/ajax-test.js\"> </script>");
-  client.println("<link rel=\"stylesheet\" type=\"text/css\" href=\"http://velen.tech/ajax-test.css\" media=\"all\" />");
+  client.println("<script type=\"text/javascript\" src=\"http://velen.tech/velen-main.js\"> </script>");
+  client.println("<link rel=\"stylesheet\" type=\"text/css\" href=\"http://velen.tech/velen-main.css\" media=\"all\" />");
   client.println("</head>");
   client.println("<body onload=\"GetArduinoIO()\">");
   client.println("<h1>Velen IoT System</h1>");
