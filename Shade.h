@@ -24,10 +24,11 @@
 /* default tilt range movement length in miliseconds */
 #define DEFAULT_TILT_RANGE 1000
 
-/* types of physical button press */
-#define PHY_NO_PRESS                0
-#define PHY_MOMENTARY_PRESS         1
-#define PHY_PRESS_MORE_THAN_2SEC    2
+/* wait time between direction change (in ms) */
+#define DIRECTION_SWITCH_WAIT_TIME 300
+
+/* amount of time a button needs to be held in order to enable action on press-hold event */
+#define BUTTON_HOLD_TIME 1000
 
 /*
  * Class for handling of the Shades. Each object represents one shade composed of 4 pins (2 inputs for both directions and 2 outputs for both directions)
@@ -216,7 +217,8 @@ class Shade {
   /* toggle tilt - move the tilt in down (make it more close). If fully closed - move to fully open */
   void Shade::toggleTiltDown();
 
-  
+  /* reset the light device - this function supposed to be executed only when the mode is changed from shades to something else */
+  void Shade::reset();
 };
 
 #endif

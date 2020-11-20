@@ -11,23 +11,37 @@
 #define IN_PINS  21
 #define OUT_PINS 21
 #define SHADES   10
+#define LIGHTS   21
 #elif defined(CONTROLLINO_MAXI)
 #include <Controllino.h>
 #define IN_PINS  12
 #define OUT_PINS 12
 #define SHADES   6
+#define LIGHTS   12
 #elif defined(ARDUINO_AVR_MEGA2560)
 #define IN_PINS  28
 #define OUT_PINS 28
 #define SHADES   14
+#define LIGHTS   28
 #endif
+
+/* types of physical button press */
+#define PHY_NO_PRESS                0
+#define PHY_MOMENTARY_PRESS         1
+#define PHY_PRESS_MORE_THAN_2SEC    2
 
 /* indexes for EEPROM information holding */
 #define EEPROM_IDX_ARDID    0  // length 1
 #define EEPROM_IDX_RASPYID  1  // length 1
 #define EEPROM_IDX_REG      2  // length 1
 #define EEPROM_IDX_RASPYIP  3  // length 6
-#define EEPROM_IDX_NEXT     9
+#define EEPROM_IDX_MODE     9  // length 1
+#define EEPROM_IDX_NEXT    10
+
+/* functional modes of the entire device */
+#define MODE_LIGHTS 0
+#define MODE_SHADES 1
+
 
 class Settings {
   private:
@@ -49,6 +63,8 @@ class Settings {
     /* the shadeID array */
     static byte shadeIDs[SHADES];
 
+    /* the LightID array */
+    static byte lightIDs[LIGHTS];
 
     /* variable sets how much time the shade motor should be running (in seconds) */
     static const byte runTimer = 10;
@@ -66,6 +82,10 @@ class Settings {
     static byte getShadeInPinUp(byte shadeID);
     static byte getShadeOutPinDown(byte shadeID);
     static byte getShadeInPinDown(byte shadeID);
+
+    /* Get the Light PINs based on the shade ID */
+    static byte Settings::getLightOutPin(byte lightID);
+    static byte Settings::getLightInPin(byte lightID);
 
     /* set input pin mode (platform independent) */
     static void Settings::setInPinMode(uint8_t pin);
@@ -93,13 +113,22 @@ class Settings {
     static byte Settings::EEPROMGetRaspyID();
 
     /* Get from the EEPROM the IP address of the raspy where this arduino is registered */
-    static void Settings::EEPROMGetRaspyIP(IPAddress addr);
+    static IPAddress Settings::EEPROMGetRaspyIP(IPAddress addr);
 
     /* Write 'deregister' value into the EEPROM */
     static void Settings::EEPROMDeregister();
 
     /* Write Raspy IP address into the EEPROM */
     static void Settings::EEPROMSetRaspyIP(IPAddress addr);
+
+    /* Write all registration data into the EEPROM */
+    static void Settings::EEPROMRegister(byte ardID, byte raspyID, IPAddress addr);
+
+    /* Write System mode into the EEPROM */
+    static void Settings::EEPROMSetMode(byte mode);
+    
+    /* Get from the EEPROM System mode */
+    static byte Settings::EEPROMGetMode();
 };
 
 extern Settings Platform;

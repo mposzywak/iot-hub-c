@@ -20,6 +20,7 @@ static ARiFClass::t ARiFClass::t_func1 = {0, 1000 * ARiF_BEACON_INT}; /* for ARi
 static ARiFClass::t ARiFClass::t_func2 = {0, 1000}; /* for everysecond on the DHCP checking */
 static byte ARiFClass::lastShadePosition = 0;
 static byte ARiFClass::lastShadeTilt = 0;
+static byte ARiFClass::mode = 0;
 
 
 static byte ARiFClass::begin(byte version, byte mac[]) {
@@ -119,54 +120,103 @@ static byte ARiFClass::update() {
         //}
         break;
       case CMD_SHADEUP:
-        lastDevID = getValue(buff, DEVID);
-        client.println(F(HTTP_200_OK));
-        client.println();
-        client.stop();
-        return CMD_SHADEUP;
+        if (mode == M_SHADES) {
+          lastDevID = getValue(buff, DEVID);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_SHADEUP;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
         break;
       case CMD_SHADEDOWN:
-        lastDevID = getValue(buff, DEVID);
-        client.println(F(HTTP_200_OK));
-        client.println();
-        client.stop();
-        return CMD_SHADEDOWN;
+        if (mode == M_SHADES) {
+          lastDevID = getValue(buff, DEVID);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_SHADEDOWN;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
         break;
       case CMD_LIGHTON:
-        lastDevID = getValue(buff, DEVID);
-        client.println(F(HTTP_200_OK));
-        client.println();
-        client.stop();
-        return CMD_LIGHTON;
+        if (mode == M_LIGHTS) {
+          lastDevID = getValue(buff, DEVID);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_LIGHTON;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
         break;
       case CMD_LIGHTOFF:
-        lastDevID = getValue(buff, DEVID);
-        client.println(F(HTTP_200_OK));
-        client.println();
-        client.stop();
-        return CMD_LIGHTOFF;
+        if (mode == M_LIGHTS) {
+          lastDevID = getValue(buff, DEVID);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_LIGHTOFF;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
         break;
       case CMD_SHADEPOS:
-        lastDevID = getValue(buff, DEVID);
-        lastShadePosition = getValue(buff, VALUE);
-        client.println(F(HTTP_200_OK));
-        client.println();
-        client.stop();
-        return CMD_SHADEPOS;
+        if (mode == M_SHADES) {
+          lastDevID = getValue(buff, DEVID);
+          lastShadePosition = getValue(buff, VALUE);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_SHADEPOS;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
         break;
       case CMD_SHADETILT:
-        lastDevID = getValue(buff, DEVID);
-        lastShadeTilt = getValue(buff, VALUE);
-        client.println(F(HTTP_200_OK));
-        client.println();
-        client.stop();
-        return CMD_SHADETILT;
+        if (mode == M_SHADES) {
+          lastDevID = getValue(buff, DEVID);
+          lastShadeTilt = getValue(buff, VALUE);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_SHADETILT;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
         break;
       case CMD_SHADESTOP:
-        client.println(F(HTTP_200_OK));
-        client.println();
-        client.stop();
-        return CMD_SHADESTOP;
+        if (mode == M_SHADES) {
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_SHADESTOP;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
         break;
       case CMD_UNKNOWN:
         client.println(F(HTTP_500_Error));
@@ -377,4 +427,59 @@ byte ARiFClass::getLastShadeTilt() {
 void ARiFClass::deregister() {
   isRegistered = false;
   ardID = 0;
+}
+
+static void ARiFClass::sendLightStatus(byte devID, byte value) {
+  if (!isConnected) return;  // exit function if the link is dead;
+  if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
+    Serial.print("devID: ");
+    Serial.print(devID);
+    Serial.print(" sending to "); // to be removed
+    Serial.print(ARiFClient.remoteIP()); // to be removed
+    // Make a HTTP request:
+    ARiFClient.print("POST /?devID=");
+    ARiFClient.print(devID);
+    ARiFClient.print("&ardID=");
+    ARiFClient.print(ardID);
+    ARiFClient.print("&raspyID=");
+    if (raspyID < 10) {
+      ARiFClient.print("00");
+      ARiFClient.print(raspyID);
+    } else {
+      if (raspyID >= 10 < 100) {
+        ARiFClient.print("0");
+        ARiFClient.print(raspyID);
+      } else {
+        ARiFClient.print(raspyID);
+      }
+    }
+
+    ARiFClient.print(F("&cmd=status&devType=digitOUT&dataType=bool&value="));
+    if (value == VAL_OFF) {
+      ARiFClient.print("0\n");
+      Serial.println(" OFF. ");
+    } else if (value == VAL_ON) {
+      ARiFClient.print("1\n");
+      Serial.println(" ON. ");
+    }
+
+
+    ARiFClient.println("Host: raspy");
+    ARiFClient.println("Connection: close");
+    ARiFClient.println();
+  } else {
+    Serial.println("Problem with connecting");
+  }
+}
+
+static void ARiFClass::sendLightON(byte devID) {
+  sendLightStatus(devID, VAL_ON);
+}
+
+static void ARiFClass::sendLightOFF(byte devID) {
+  sendLightStatus(devID, VAL_OFF);
+}
+
+static void ARiFClass::setMode(byte m) {
+  mode = m;
 }

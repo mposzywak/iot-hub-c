@@ -1,0 +1,25 @@
+        .IO_box {
+            float: left;
+            margin: 0 20px 20px 0;
+            border: 1px solid blue;
+            padding: 0 5px 0 5px;
+            width: 180px;
+        }
+        h1 {
+            font-size: 120%;
+            color: blue;
+            margin: 0 0 10px 0;
+        }
+        h2 {
+            font-size: 85%;
+            color: #5734E6;
+            margin: 5px 0 5px 0;
+        }
+        p, form, button {
+            font-size: 80%;
+            color: #252525;
+        }
+        .small_text {
+            font-size: 70%;
+            color: #737373;
+        }
