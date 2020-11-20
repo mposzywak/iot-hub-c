@@ -56,11 +56,19 @@
 #define VAL_UNSYNC      3
 #define VAL_SYNC        4
 
+/* Light status to control sendLightStatus() CMD value */
+#define VAL_OFF        0
+#define VAL_ON         1
+
 /* shade status dataType values */
 #define DT_DIRECTION 0
 #define DT_POSITION  1
 #define DT_TILT      2
 #define DT_SYNC      3
+
+/* define modes of operations */
+#define M_SHADES     0
+#define M_LIGHTS     1
 
 class ARiFClass {
   typedef struct t  {
@@ -127,6 +135,9 @@ class ARiFClass {
 
     /* variable used to signal if the IP of the raspy has changed */
     static bool signalIPchange;
+
+    /* mode of operations */
+    static byte mode;
 
     //Tasks and their Schedules.
     static t t_func1;
@@ -225,6 +236,17 @@ class ARiFClass {
     /* deregister this arduino */
     static void deregister();
 
+    /* send the generic light status message */
+    static void ARiFClass::sendLightStatus(byte devID, byte value);
+
+    /* send the light ON status message */
+    static void ARiFClass::sendLightON(byte devID);
+
+    /* send the light OFF status message */
+    static void ARiFClass::sendLightOFF(byte devID);
+
+    /* set the arduino mode */
+    static void ARiFClass::setMode(byte m);
 };
 
 extern ARiFClass ARiF;

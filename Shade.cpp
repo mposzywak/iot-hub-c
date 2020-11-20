@@ -29,12 +29,7 @@ void Shade::init(byte shadeID) {
 
   Shade::low = Settings::getLow();
   Shade::high = Settings::getHigh();
-  //digitalWrite(outPinUp, Shade::low);
-  //digitalWrite(outPinDown, Shade::low);
-    Serial.print("Setting pin: ");
-    Serial.print(outPinUp);
-    Serial.print(" value: ");
-    Serial.println(Shade::low);
+
   Settings::setOutputPinValue(outPinUp, Shade::low);
   Settings::setOutputPinValue(outPinDown, Shade::low);
   outPinUpState = Shade::low;
@@ -63,13 +58,13 @@ void Shade::init(byte shadeID) {
   tiltSections[1] = DEFAULT_TILT_RANGE / 2;
   tiltSections[2] = 0;
 
-  dir_swap = { 0, 300, true }; /* The 300ms timer to wait before changing direction up/down */
+  dir_swap = { 0, DIRECTION_SWITCH_WAIT_TIME, true }; /* The 300ms timer to wait before changing direction up/down */
   updateExec = { 0, 1000, false }; /* The timer to control the update() frequency */
   tiltRun = { 0, 500, true };
   waitBeforeTilt = { 0, 500, true };
 
-  upButtonHold = { 0, 1000, true };
-  downButtonHold = { 0, 1000, true };
+  upButtonHold = { 0, BUTTON_HOLD_TIME, true };
+  downButtonHold = { 0, BUTTON_HOLD_TIME, true };
 
   desiredTilt = TILT_H_CLOSED;
   tiltMovement = false;
@@ -90,7 +85,6 @@ byte Shade::isUpPressed() {
 
       /* EXECUTED ON BUTTON RELEASE - END */
       if (timeCheck(&upButtonHold)) {
-        Serial.println("Held up above 2 sec");
         inPinUpPressed = false;
         return PHY_PRESS_MORE_THAN_2SEC;
       }
@@ -117,7 +111,6 @@ byte Shade::isDownPressed() {
 
       /* EXECUTED ON BUTTON RELEASE - END */
       if (timeCheck(&downButtonHold)) {
-        Serial.println("Held down above 2 sec");
         inPinDownPressed = false;
         return PHY_PRESS_MORE_THAN_2SEC;
       }
@@ -533,4 +526,14 @@ void Shade::toggleTiltDown() {
   } else if (desiredTilt == TILT_H_CLOSED) {
     setTilt(TILT_F_OPEN);
   } 
+}
+
+void Shade::reset() {
+  Settings::setOutputPinValue(outPinUp, Shade::low);
+  Settings::setOutputPinValue(outPinDown, Shade::low);
+  outPinUpState = Shade::low;
+  outPinDownState = Shade::low;
+  synced = false;
+  justStoppedVar = false;
+  justStoppedTiltVar = false;
 }

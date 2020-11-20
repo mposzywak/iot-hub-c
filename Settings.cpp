@@ -74,7 +74,10 @@
     static byte Settings::digitOUTdevID[OUT_PINS] = { 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70 };
 
     /* the shadeID array */
-    static byte Settings::shadesIDs[SHADES] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+    static byte Settings::shadeIDs[SHADES] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+
+    /* the lightID array */
+    static byte Settings::lightIDs[LIGHTS] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 };
 
 #elif defined(CONTROLLINO_MAXI) 
     static byte Settings::digitIN[IN_PINS] =   { CONTROLLINO_A0, 
@@ -111,7 +114,10 @@
     static byte Settings::digitOUTdevID[OUT_PINS] = { 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61 };
 
     /* the shadeID array */
-    static byte Settings::shadesIDs[SHADES] = { 1, 2, 3, 4, 5, 6 };
+    static byte Settings::shadeIDs[SHADES] = { 1, 2, 3, 4, 5, 6 };
+
+    /* the lightID array */
+    static byte Settings::lightIDs[LIGHTS] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
     
 #elif defined(ARDUINO_AVR_MEGA2560)
     static byte Settings::digitIN[IN_PINS] =   { 2, 
@@ -181,6 +187,9 @@
 
     /* the shadeID array */
     static byte Settings::shadeIDs[SHADES] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 };
+
+    /* the lightID array */
+    static byte Settings::lightIDs[LIGHTS] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28 };
     
 #else 
   #error "Unsupported board"
@@ -198,6 +207,14 @@ static bool Settings::getHigh() {
     return HIGH;
   else
     return LOW;
+}
+
+static byte Settings::getLightOutPin(byte lightID) {
+  return Settings::digitOUT[(lightID - 1)];
+}
+
+static byte Settings::getLightInPin(byte lightID) {
+  return Settings::digitIN[(lightID - 1)];
 }
 
 static byte Settings::getShadeOutPinUp(byte shadeID) {
@@ -297,4 +314,19 @@ static void Settings::EEPROMRegister(byte ardID, byte raspyID, IPAddress addr) {
   EEPROM.write(EEPROM_IDX_ARDID, ardID);
   EEPROM.write(EEPROM_IDX_RASPYID, raspyID);
   EEPROM.put(EEPROM_IDX_RASPYIP, addr);
+}
+
+static byte Settings::EEPROMGetMode() {
+  byte mode;
+  mode = EEPROM.read(EEPROM_IDX_MODE);
+  if (mode != MODE_LIGHTS && mode != MODE_SHADES) {
+    mode = MODE_LIGHTS;
+    EEPROM.write(EEPROM_IDX_MODE, mode);
+    Serial.print("Wrong value set as MODE value in EEPROM");
+  }
+  return mode;
+}
+
+static void Settings::EEPROMSetMode(byte mode) {
+  EEPROM.write(EEPROM_IDX_MODE, mode);
 }
