@@ -13,6 +13,7 @@
 #define TILT_F_CLOSED  0
 #define TILT_H_CLOSED  45
 #define TILT_F_OPEN    90
+#define TILT_NONE      255     /* only to be assigned to secDesiredTilt */
 
 #define TILT_FULL_MOVE 1100
 #define TILT_HALF_MOVE 550
@@ -67,6 +68,9 @@ class Shade {
 
     /* variable indicating the desired tilt. This is used to control the shade tilt */
     byte desiredTilt;
+
+    /* variable used to hold the desired Tilt value that is received during tilt move (so that desiredTilt is not overwritten) */
+    byte secDesiredTilt;
 
     int tiltSections[3];
 
