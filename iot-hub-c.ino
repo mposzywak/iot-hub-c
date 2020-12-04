@@ -174,11 +174,11 @@ void loop() {
   */
   if (funcMode == MODE_SHADES) {
     for (int i = 0; i < SHADES; i++) {
-      //byte pos = shades[i].update();
-      if (shades[i].update() <= 100) {
+      shades[i].update();
+      /*if (shades[i].update() <= 100) {
         Serial.println("Sending 1 shade position");
         //ARiF.sendShadePosition(shadeIDs[i], shades[i].getCurrentPosition());
-      }
+      }*/
 
       byte devID = shades[i].getDevID();
       byte upPressResult = shades[i].isUpPressed();
