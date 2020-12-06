@@ -52,16 +52,16 @@ class Shade {
     byte inPinDown;
 
     /* variable holding the current position of the shade (in seconds) */
-    byte position;
+    int position;
 
     /* variable indicating the desired position. This is used to control the movement of the shade */
-    byte desiredPosition;
+    int desiredPosition;
 
     /* variable holding information if the shade is synced (i. e. if the system knows in which position it is in) */
     bool synced;
 
     /* the amount of time (in seconds) it takes for the shade to fully open from fully closed state (or vice-versa) */
-    byte movementRange;
+    int movementRange;
 
     /* this is the tilt value of the current shade. It is configurable. */
     byte tiltRange;
@@ -92,13 +92,16 @@ class Shade {
 
     byte oldSec;
 
-    byte sections[6];
+    int sections[6];
 
     /* contains the flag if the last checkpoint value has been already reported */
     bool positionReported;
 
     /* contains the value of the last checkpoint Position */
-    byte reachedPosition;
+    int reachedPosition;
+
+    /* the secondary position value. Used to store temporary desired position value before movement can be started */
+    int secPosition;
 
     /* contains the flag if the information about Shade being unsync has been already reported */
     bool unsyncReported;
@@ -118,8 +121,8 @@ class Shade {
     /* holds information if the current move is a tilt movement (so that other conditions can be disabled) */
     bool tiltMovement;
 
-    void upToPosition(byte dp);
-    void downToPosition(byte dp);
+    void upToPosition(int dp);
+    void downToPosition(int dp);
 
     /* holds time values for time gap on shade movement direction change */
     t dir_swap;
@@ -145,7 +148,8 @@ class Shade {
     void setTiltFromUp();
     void setTiltFromDown();
 
-    
+    /* indicator variable to hold info if during tilt movement a position change request has been received */
+    bool positionAfterTilt;
   public:
 
     static byte low;
