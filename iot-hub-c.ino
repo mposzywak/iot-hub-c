@@ -13,9 +13,11 @@
 
 /*
 
-  CONTROLLINO - smarthouse test, Version 1.1.0
+   V E L E N   H U B
+   
+   - IoT control hub, Version 1.1.0
 
-  Used to control outputs by inputs and provide a REST-like API over network to that system.
+  Used to control outputs by inputs and provide a REST-like API over network.
 
   Created 8 Oct 2019
   by Maciej
