@@ -23,7 +23,6 @@
 
 
 /* shade states */
-
 #define S_WEBGUI_UP      0
 #define S_WEBGUI_DOWN    1
 #define S_WEBGUI_STOP    2
@@ -38,6 +37,10 @@
 #define S_WEBGUI_SYNC   11
 #define S_WEBGUI_UNSYNC 12
 
+/* light types */
+#define S_WEBGUI_L_ONOF  0
+#define S_WEBGUI_L_TIMER 1
+
 /* shade tracking object */
 typedef struct WebShade {
   byte devID;
@@ -51,6 +54,8 @@ typedef struct WebShade {
 typedef struct WebLight {
   byte devID;
   byte status;
+  byte type;
+  byte timer;
 };
 
 class WebGUIClass {
@@ -104,13 +109,19 @@ class WebGUIClass {
     static void WebGUIClass::shadeSetTilt(byte devID, byte tilt);
 
     /* initialize light object */
-    static void WebGUIClass::lightInit(byte index, byte devID);
+    static void WebGUIClass::lightInit(byte index, byte devID, byte type);
 
     /* set light to on */
     static void WebGUIClass::lightSetON(byte devID);
 
     /* set light to off */
     static void WebGUIClass::lightSetOFF(byte devID);
+
+    /* set light type */
+    static void WebGUIClass::lightSetType(byte devID, byte type);
+
+    /* set light timer */
+    static void WebGUIClass::lightSetTimer(byte devID, byte timer);
 
 };
 

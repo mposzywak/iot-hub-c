@@ -86,6 +86,11 @@ void setup() {
   /* Set the default mode of the device based on the EEPROM value */
   funcMode = Platform.EEPROMGetMode();
 
+  /* assume default mode on platform where it couldn't be read */
+  if (funcMode == MODE_FAIL) {
+    funcMode = MODE_LIGHTS;
+  }
+
   if (funcMode == MODE_SHADES) {
     /* initialize the shades */
     for (int i = 0; i < SHADES; i++) {
@@ -93,14 +98,15 @@ void setup() {
       WebGUI.shadeInit(i, Settings::shadeIDs[i]);
     }
     for (int i = 0; i < LIGHTS; i++) {
-      WebGUI.lightInit(i, Platform.lightIDs[i]);
+      WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_TIMER);
     }
     WebGUI.setSystemMode(M_WEBGUI_SHADES);
   } else if (funcMode == MODE_LIGHTS) {
     /* initialize the lights */
     for (int i = 0; i < LIGHTS; i++) {
-      lights[i].init(Platform.lightIDs[i]);
-      WebGUI.lightInit(i, Platform.lightIDs[i]);
+      lights[i].init(Platform.lightIDs[i], DIGITOUT_TIMER);
+      WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_TIMER);
+      WebGUI.lightSetTimer(Platform.lightIDs[i], DEFAULT_TIMER);
     }
     for (int i = 0; i < SHADES; i++) {
       WebGUI.shadeInit(i, Settings::shadeIDs[i]);
@@ -131,7 +137,6 @@ void setup() {
     Serial.println(raspyID);
     ARiF.begin(VER_SHD_1, mac, iotGwIP, ardID, raspyID);
     WebGUI.setInfoRegistered(ardID, raspyID, iotGwIP);
-
   } else {
     Serial.println("Not registered within any iot-gw");
     ARiF.begin(VER_SHD_1, mac);
@@ -286,8 +291,8 @@ void loop() {
         shades[i].reset();
       }
       for (int i = 0; i < LIGHTS; i++) {
-        lights[i].init(Platform.lightIDs[i]);
-        WebGUI.lightInit(i, Platform.lightIDs[i]);
+        lights[i].init(Platform.lightIDs[i], DIGITOUT_TIMER);
+        WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_TIMER);
       }
       break;
     case CMD_WEBGUI_SET_M_SHADES:                     /* Switch Mode to Shades */
@@ -386,7 +391,7 @@ void loop() {
       }
       break;
     case CMD_SHADESTOP:                                /* shadeSTOP command received */
-      Serial.print("ShadeSTOP received: ");
+      Serial.println("ShadeSTOP received");
       lastDevID = ARiF.getLastDevID();
       //Serial.println(s.getDevID()); // why s.toPosition() doesn't work??
       for (int i = 0; i < SHADES; i++) {
@@ -396,7 +401,7 @@ void loop() {
       }
       break;
     case CMD_LIGHTON:                                  /* lightON command received */
-      Serial.print("Received lightON command from: ");
+      Serial.print("Received lightON command");
       lastDevID = ARiF.getLastDevID();
       for (int i = 0; i < LIGHTS; i++) {
         if (lights[i].getDevID() == lastDevID) {
@@ -405,13 +410,35 @@ void loop() {
       }
       break;
     case CMD_LIGHTOFF:                                 /* lightOFF command received */
-      Serial.print("Received lightOFF command from: ");
+      Serial.print("Received lightOFF command");
       lastDevID = ARiF.getLastDevID();
       for (int i = 0; i < LIGHTS; i++) {
         if (lights[i].getDevID() == lastDevID) {
           lights[i].toggle();
         }
       }
+      break;
+    case CMD_LIGHT_TYPE:
+      Serial.print("Received lightType command: ");
+      lastDevID = ARiF.getLastDevID();
+      Serial.println(ARiF.getLastLightType());
+      for (int i = 0; i < LIGHTS; i++) {
+        if (lights[i].getDevID() == lastDevID) {
+          lights[i].setType(ARiF.getLastLightType());
+        }
+      }
+      WebGUI.lightSetType(lastDevID, ARiF.getLastLightType());
+      break;
+    case CMD_LIGHT_TIMER:
+      Serial.print("Received lightTimer command: ");
+      lastDevID = ARiF.getLastDevID();
+      Serial.println(ARiF.getLastLightTimer());
+      for (int i = 0; i < LIGHTS; i++) {
+        if (lights[i].getDevID() == lastDevID) {
+          lights[i].setTimer(ARiF.getLastLightTimer());
+        }
+      }
+      WebGUI.lightSetTimer(lastDevID, ARiF.getLastLightTimer());
       break;
     case CMD_UNKNOWN:                                  /* unknown command received */
       Serial.print("Received unknown command from: ");

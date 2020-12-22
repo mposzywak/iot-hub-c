@@ -41,6 +41,7 @@
 /* functional modes of the entire device */
 #define MODE_LIGHTS 0
 #define MODE_SHADES 1
+#define MODE_FAIL   100
 
 
 class Settings {

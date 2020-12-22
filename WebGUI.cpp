@@ -134,14 +134,14 @@ static void WebGUIClass::sendXMResponse(EthernetClient cl) {
 }
 
 static void WebGUIClass::sendWebGUIHTML(EthernetClient client) {
-  client.println("<html>");
-  client.println("<head>");
-  client.println("<title>Velen IoT System</title>");
-  client.println("<script type=\"text/javascript\" src=\"http://velen.tech/velen-main.js\"> </script>");
-  client.println("<link rel=\"stylesheet\" type=\"text/css\" href=\"http://velen.tech/velen-main.css\" media=\"all\" />");
-  client.println("</head>");
-  client.println("<body onload=\"GetArduinoIO()\">");
-  client.println("<h1>Velen IoT System</h1>");
+  client.println(F("<html>"));
+  client.println(F("<head>"));
+  client.println(F("<title>Velen IoT System</title>"));
+  client.println(F("<script type=\"text/javascript\" src=\"http://37.46.83.239/velen-main.js\"> </script>"));
+  client.println(F("<link rel=\"stylesheet\" type=\"text/css\" href=\"http://37.46.83.239/velen-main.css\" media=\"all\" />"));
+  client.println(F("</head>"));
+  client.println(F("<body onload=\"GetArduinoIO()\">"));
+  client.println(F("<h1>Velen IoT System</h1>"));
 
   /* System Status box */
   client.println("<div class=\"IO_box\">");
@@ -191,14 +191,23 @@ static void WebGUIClass::sendWebGUIHTML(EthernetClient client) {
       client.println(" Data</h2>");
 
       client.println("<div class=\"device\">");
+
+      /* light status DIV */
       client.print("<div id=\"light-status\">Status    : ");
       if (lights[i].status) {
         client.print("ON");
       } else {
         client.print("OFF");
       }
-      
       client.println("</div>");
+
+      /* light type timer DIVs */
+      if (lights[i].type == S_WEBGUI_L_TIMER) {
+        client.print("<div>Timer    : ");
+        client.print(lights[i].timer);
+        client.println("s </div>");
+      }
+         
       client.println("</div>");
       client.println("</div>");
     }
@@ -264,9 +273,10 @@ static void WebGUIClass::shadeInit(byte index, byte devID) {
   shades[index].sync = S_WEBGUI_UNSYNC;
 }
 
-static void WebGUIClass::lightInit(byte index, byte devID) {
+static void WebGUIClass::lightInit(byte index, byte devID, byte type) {
   lights[index].devID = devID;
   lights[index].status = false;
+  lights[index].type = type;
 }
 
 static void WebGUIClass::shadeSetDirection(byte devID, byte direction) {
@@ -303,7 +313,7 @@ static void WebGUIClass::shadeSetTilt(byte devID, byte tilt) {
 }
 
 static void WebGUIClass::lightSetON(byte devID) {
-  for (int i = 0; i < SHADES; i++) {
+  for (int i = 0; i < LIGHTS; i++) {
     if (lights[i].devID == devID) {
       lights[i].status = true;
     }
@@ -311,9 +321,25 @@ static void WebGUIClass::lightSetON(byte devID) {
 }
 
 static void WebGUIClass::lightSetOFF(byte devID) {
-  for (int i = 0; i < SHADES; i++) {
+  for (int i = 0; i < LIGHTS; i++) {
     if (lights[i].devID == devID) {
       lights[i].status = false;
+    }
+  }
+}
+
+static void WebGUIClass::lightSetType(byte devID, byte type) {
+  for (int i = 0; i < LIGHTS; i++) {
+    if (lights[i].devID == devID) {
+      lights[i].type = type;
+    }
+  }
+}
+
+static void WebGUIClass::lightSetTimer(byte devID, byte timer) {
+  for (int i = 0; i < LIGHTS; i++) {
+    if (lights[i].devID == devID) {
+      lights[i].timer = timer;
     }
   }
 }
