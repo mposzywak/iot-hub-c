@@ -50,6 +50,7 @@
 #define RASPYID 2
 #define CMD     3
 #define VALUE   4
+#define VALUE_L 5
 
 /* Shade status to control sendShadeStatus() CMD value */
 #define VAL_MOVE_UP     2
@@ -164,7 +165,7 @@ class ARiFClass {
     static byte beginEthernet(byte mac[]);
 
     /* get single value from the ARiF URL */
-    static int getValue(char *buff, int value);
+    static long getValue(char *buff, int value);
 
     /* return true if the raspy IP address is same as the old one*/
     static bool checkIotGwIP(IPAddress ip);
@@ -236,10 +237,10 @@ class ARiFClass {
     static byte getLastShadeTilt();
 
     /* get the type of the last received lightType command */
-    static byte ARiFClass::getLastLightType();
+    static byte getLastLightType();
 
     /* get the timer of the last received lightTimer command */
-    unsigned long ARiFClass::getLastLightTimer();
+    unsigned long getLastLightTimer();
 
     /* send the shade sync information */
     static void sendShadeSynced(byte devID);

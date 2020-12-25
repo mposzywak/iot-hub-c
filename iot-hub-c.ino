@@ -103,10 +103,29 @@ void setup() {
     WebGUI.setSystemMode(M_WEBGUI_SHADES);
   } else if (funcMode == MODE_LIGHTS) {
     /* initialize the lights */
+    byte type;
+    unsigned long timer;
     for (int i = 0; i < LIGHTS; i++) {
-      lights[i].init(Platform.lightIDs[i], DIGITOUT_TIMER);
-      WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_TIMER);
-      WebGUI.lightSetTimer(Platform.lightIDs[i], DEFAULT_TIMER);
+      type = Platform.EEPROMGetLightType(Platform.lightIDs[i]);
+      Serial.print("init light: type: ");
+      Serial.println(type);
+      if (type == DIGITOUT_ONOFF) {
+        lights[i].init(Platform.lightIDs[i], DIGITOUT_ONOFF);
+        WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_ONOFF);
+      } else if (type == DIGITOUT_TIMER) {
+        timer = Platform.EEPROMGetLightTimer(Platform.lightIDs[i]);
+        Serial.print("init light: timer: ");
+        Serial.println(timer);
+        lights[i].init(Platform.lightIDs[i], DIGITOUT_TIMER);
+        lights[i].setTimer(timer);
+        WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_TIMER);
+        WebGUI.lightSetTimer(Platform.lightIDs[i], timer);
+      } else {
+        Serial.println("init light: type unrecognized");
+        lights[i].init(Platform.lightIDs[i], DIGITOUT_ONOFF);
+        WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_ONOFF);
+        Platform.EEPROMSetLightConfig(Platform.lightIDs[i], DIGITOUT_ONOFF, DIGITOUT_DEFAULT_TIMER);
+      }
     }
     for (int i = 0; i < SHADES; i++) {
       WebGUI.shadeInit(i, Settings::shadeIDs[i]);
@@ -321,6 +340,8 @@ void loop() {
 
   byte ret = ARiF.update();
   byte lastDevID;
+  byte lastLightType;
+  unsigned long lastLightTimer;
   switch (ret) {
     case U_CONNECTED:                                  /* ARiF connection with the Raspy has been re-established (or established for the first time) */
       Serial.println("Connected back!");
@@ -421,10 +442,12 @@ void loop() {
     case CMD_LIGHT_TYPE:
       Serial.print("Received lightType command: ");
       lastDevID = ARiF.getLastDevID();
-      Serial.println(ARiF.getLastLightType());
+      lastLightType = ARiF.getLastLightType();
+      Serial.println(lastLightType);
       for (int i = 0; i < LIGHTS; i++) {
         if (lights[i].getDevID() == lastDevID) {
-          lights[i].setType(ARiF.getLastLightType());
+          lights[i].setType(lastLightType);
+          Platform.EEPROMSetLightType(lastDevID, lastLightType);
         }
       }
       WebGUI.lightSetType(lastDevID, ARiF.getLastLightType());
@@ -432,10 +455,12 @@ void loop() {
     case CMD_LIGHT_TIMER:
       Serial.print("Received lightTimer command: ");
       lastDevID = ARiF.getLastDevID();
-      Serial.println(ARiF.getLastLightTimer());
+      lastLightTimer = ARiF.getLastLightTimer();
+      Serial.println(lastLightTimer);
       for (int i = 0; i < LIGHTS; i++) {
-        if (lights[i].getDevID() == lastDevID) {
-          lights[i].setTimer(ARiF.getLastLightTimer());
+        if (lights[i].getDevID() == lastDevID) {         
+          lights[i].setTimer(lastLightTimer);
+          Platform.EEPROMSetLightTimer(lastDevID, lastLightTimer);
         }
       }
       WebGUI.lightSetTimer(lastDevID, ARiF.getLastLightTimer());

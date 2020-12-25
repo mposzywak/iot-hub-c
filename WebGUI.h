@@ -38,7 +38,7 @@
 #define S_WEBGUI_UNSYNC 12
 
 /* light types */
-#define S_WEBGUI_L_ONOF  0
+#define S_WEBGUI_L_ONOFF  0
 #define S_WEBGUI_L_TIMER 1
 
 /* shade tracking object */
@@ -55,7 +55,7 @@ typedef struct WebLight {
   byte devID;
   byte status;
   byte type;
-  byte timer;
+  unsigned long timer;
 };
 
 class WebGUIClass {
@@ -121,7 +121,7 @@ class WebGUIClass {
     static void WebGUIClass::lightSetType(byte devID, byte type);
 
     /* set light timer */
-    static void WebGUIClass::lightSetTimer(byte devID, byte timer);
+    static void WebGUIClass::lightSetTimer(byte devID, unsigned long timer);
 
 };
 

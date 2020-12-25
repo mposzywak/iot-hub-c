@@ -195,7 +195,7 @@ static byte ARiFClass::update() {
       case CMD_LIGHT_TIMER:
         if (mode == M_LIGHTS) {
           lastDevID = getValue(buff, DEVID);
-          lastLightTimer = getValue(buff, VALUE);
+          lastLightTimer = getValue(buff, VALUE_L);
           client.println(F(HTTP_200_OK));
           client.println();
           client.stop();
@@ -281,7 +281,7 @@ static byte ARiFClass::beginEthernet(byte mac[]) {
   }
 }
 
-static int ARiFClass::getValue(char *buff, int value) {
+static long ARiFClass::getValue(char *buff, int value) {
   char *pos;
   if (value == DEVID) {
     pos = strstr(buff, "devID=");
@@ -298,6 +298,10 @@ static int ARiFClass::getValue(char *buff, int value) {
   if (value == VALUE) {
     pos = strstr(buff, "value=");
     return atoi(pos + 6);
+  }
+  if (value == VALUE_L) {
+    pos = strstr(buff, "value=");
+    return atol(pos + 6);
   }
   if (value == CMD ) {
     if (strstr(buff, "cmd=lightType")) return CMD_LIGHT_TYPE;

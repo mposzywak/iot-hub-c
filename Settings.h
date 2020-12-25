@@ -36,12 +36,12 @@
 #define EEPROM_IDX_REG      2  // length 1
 #define EEPROM_IDX_RASPYIP  3  // length 6
 #define EEPROM_IDX_MODE     9  // length 1
-#define EEPROM_IDX_NEXT    10
+#define EEPROM_IDX_LIGHTS   10 // length 150 -> 30 (lights) x 5 (1 type + 4 timer)
 
 /* functional modes of the entire device */
 #define MODE_LIGHTS 0
 #define MODE_SHADES 1
-#define MODE_FAIL   100
+#define MODE_FAIL   100 /* returned by EEPROMGetMode() if couldn't load mode from EEPROM */
 
 
 class Settings {
@@ -52,6 +52,12 @@ class Settings {
 
     /* The output pin array */
     static byte digitOUT[OUT_PINS];
+
+    /* read a long value from EEPROM's given address */
+    static unsigned long EEPROMReadlong(unsigned long address);
+
+    /* write a long vlaue into EEPROM at a given address */
+    static void EEPROMWritelong(int address, unsigned long value);
 
   public:
 
@@ -130,6 +136,24 @@ class Settings {
     
     /* Get from the EEPROM System mode */
     static byte Settings::EEPROMGetMode();
+
+    /* Write individual Light settings in the EEPROM */
+    static void EEPROMSetLightConfig(byte devID, byte type, unsigned long timer);
+
+    /* Get from the EEPROM Light type */
+    static byte EEPROMGetLightType(byte devID);
+
+    /* Write light type into the EEPROM */
+    static void EEPROMSetLightType(byte devID, byte type);
+
+    /* Get from the EEPROM Light timer */
+    static unsigned long EEPROMGetLightTimer(byte devID);
+
+    /* Write light timer into the EEPROM */
+    static void EEPROMSetLightTimer(byte devID, unsigned long timer);
+
+    /* Write light status into the EEPROM */
+    static void EEPROMSetLightStatus(byte devID, byte status);
 };
 
 extern Settings Platform;

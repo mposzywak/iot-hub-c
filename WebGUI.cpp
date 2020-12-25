@@ -205,7 +205,7 @@ static void WebGUIClass::sendWebGUIHTML(EthernetClient client) {
       if (lights[i].type == S_WEBGUI_L_TIMER) {
         client.print("<div>Timer    : ");
         client.print(lights[i].timer);
-        client.println("s </div>");
+        client.println("ms </div>");
       }
          
       client.println("</div>");
@@ -336,7 +336,7 @@ static void WebGUIClass::lightSetType(byte devID, byte type) {
   }
 }
 
-static void WebGUIClass::lightSetTimer(byte devID, byte timer) {
+static void WebGUIClass::lightSetTimer(byte devID, unsigned long timer) {
   for (int i = 0; i < LIGHTS; i++) {
     if (lights[i].devID == devID) {
       lights[i].timer = timer;

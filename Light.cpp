@@ -32,7 +32,7 @@ void Light::init(byte lightID, byte type) {
 
   buttonHold = { 0, 1000, true };
 
-  timer = DEFAULT_TIMER;
+  timer = DIGITOUT_DEFAULT_TIMER;
   onTimer = { 0, timer * 1000, true };
   
   justToggled = false;
@@ -41,13 +41,13 @@ void Light::init(byte lightID, byte type) {
 void Light::setType(byte type) {
   this->type = type;
   if (type == DIGITOUT_TIMER) {
-    this->timer = DEFAULT_TIMER;
+    this->timer = DIGITOUT_DEFAULT_TIMER;
   }
 }
 
 void Light::setTimer(unsigned long timer) {
   this->timer = timer;
-  this->onTimer.tTimeout = timer * 1000;
+  this->onTimer.tTimeout = timer;
 }
 
 byte Light::getType() {

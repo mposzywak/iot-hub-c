@@ -6,11 +6,12 @@
 /* types of digitOUT devices */
 #define DIGITOUT_ONOFF   0     /* Upon activation it changes the state of the output pin from on to off or vice-versa */
 #define DIGITOUT_TIMER   1     /* Upon activation it changes the state of the output pin to on for an amount of time, after that it goes to off */
+#define DIGITOUT_FAIL  100     /* value to indicated failed/unreadable value */
 
 /* other default values */
 
 /* default timer for timer type lights (in seconds) */
-#define DEFAULT_TIMER    17
+#define DIGITOUT_DEFAULT_TIMER    30000
 
 class Light {
   /* types definitions */
