@@ -330,3 +330,81 @@ static byte Settings::EEPROMGetMode() {
 static void Settings::EEPROMSetMode(byte mode) {
   EEPROM.write(EEPROM_IDX_MODE, mode);
 }
+
+/* The shadeIDs and lightIDs are used as index values for the entries in the EEPROM hence they must all start from 1 and be consecutive in order for the 
+   EEPROM storage of individual configuration of devices to work properly */
+
+/* The following scheme shows how the data is stored:
+ *  xx xx xxxxxxxx
+ *  |  |  |__________The timer value in miliseconds: (unsigned long)
+ *  |  |_______ The type of light device: (byte)
+ *  |____ The ON/OFF status of the light device: (byte) 
+ */
+
+static void Settings::EEPROMSetLightConfig(byte devID, byte type, unsigned long timer) {
+  byte index = EEPROM_IDX_LIGHTS + (6 * (devID - 1)); /* start address for Light data structure */
+  EEPROM.write(index + 1, type);
+  EEPROMWritelong(index + 2, timer);
+}
+
+static byte Settings::EEPROMGetLightType(byte devID) {
+  byte index = EEPROM_IDX_LIGHTS + (6 * (devID - 1)); /* start address for Light data structure */
+  byte type;
+  type = EEPROM.read(index + 1);
+  return type;
+}
+
+static void Settings::EEPROMSetLightType(byte devID, byte type) {
+  byte index = EEPROM_IDX_LIGHTS + (6 * (devID - 1)); /* start address for Light data structure */
+  EEPROM.write(index + 1, type);
+}
+
+static unsigned long Settings::EEPROMGetLightTimer(byte devID) {
+  byte index = EEPROM_IDX_LIGHTS + (6 * (devID - 1)); /* start address for Light data structure */
+  unsigned long timer;
+  timer = EEPROMReadlong(index + 2);
+  return timer;
+}
+
+static void Settings::EEPROMSetLightTimer(byte devID, unsigned long timer) {
+  byte index = EEPROM_IDX_LIGHTS + (6 * (devID - 1)); /* start address for Light data structure */
+  EEPROMWritelong(index + 2, timer);
+}
+
+static void Settings::EEPROMSetLightStatus(byte devID, byte status) {
+  byte index = EEPROM_IDX_LIGHTS + (6 * (devID - 1)); /* start address for Light data structure */
+  EEPROM.write(index, status);
+}
+
+static unsigned long Settings::EEPROMReadlong(unsigned long address) {
+  unsigned long value;
+  long four = EEPROM.read(address);
+  long three = EEPROM.read(address + 1);
+  long two = EEPROM.read(address + 2);
+  long one = EEPROM.read(address + 3);
+
+  value = ((four << 0) & 0xFF) + ((three << 8) & 0xFFFF) + ((two << 16) & 0xFFFFFF) + ((one << 24) & 0xFFFFFFFF);
+
+  Serial.print("Reading value: ");
+  Serial.print(value);
+  Serial.print(" From address: ");
+  Serial.println(address);
+  return value;
+}
+
+static void Settings::EEPROMWritelong(int address, unsigned long value) {
+  byte four = (value & 0xFF);
+  byte three = ((value >> 8) & 0xFF);
+  byte two = ((value >> 16) & 0xFF);
+  byte one = ((value >> 24) & 0xFF);
+ 
+  EEPROM.write(address, four);
+  EEPROM.write(address + 1, three);
+  EEPROM.write(address + 2, two);
+  EEPROM.write(address + 3, one);
+
+  Serial.print("Writing value: ");
+  Serial.print(value);
+  Serial.print(" To address: ");
+  Serial.println(address);
+}

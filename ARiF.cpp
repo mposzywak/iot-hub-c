@@ -21,6 +21,8 @@ static ARiFClass::t ARiFClass::t_func2 = {0, 1000}; /* for everysecond on the DH
 static byte ARiFClass::lastShadePosition = 0;
 static byte ARiFClass::lastShadeTilt = 0;
 static byte ARiFClass::mode = 0;
+static byte ARiFClass::lastLightType = 0;
+static unsigned long ARiFClass::lastLightTimer = 0;
 
 
 static byte ARiFClass::begin(byte version, byte mac[]) {
@@ -175,6 +177,36 @@ static byte ARiFClass::update() {
           return U_NOTHING;
         }
         break;
+      case CMD_LIGHT_TYPE:
+        if (mode == M_LIGHTS) {
+          lastDevID = getValue(buff, DEVID);
+          lastLightType = getValue(buff, VALUE);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_LIGHT_TYPE;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
+        break;
+      case CMD_LIGHT_TIMER:
+        if (mode == M_LIGHTS) {
+          lastDevID = getValue(buff, DEVID);
+          lastLightTimer = getValue(buff, VALUE_L);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_LIGHT_TIMER;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
+        break;
       case CMD_SHADEPOS:
         if (mode == M_SHADES) {
           lastDevID = getValue(buff, DEVID);
@@ -249,7 +281,7 @@ static byte ARiFClass::beginEthernet(byte mac[]) {
   }
 }
 
-static int ARiFClass::getValue(char *buff, int value) {
+static long ARiFClass::getValue(char *buff, int value) {
   char *pos;
   if (value == DEVID) {
     pos = strstr(buff, "devID=");
@@ -267,7 +299,13 @@ static int ARiFClass::getValue(char *buff, int value) {
     pos = strstr(buff, "value=");
     return atoi(pos + 6);
   }
+  if (value == VALUE_L) {
+    pos = strstr(buff, "value=");
+    return atol(pos + 6);
+  }
   if (value == CMD ) {
+    if (strstr(buff, "cmd=lightType")) return CMD_LIGHT_TYPE;
+    if (strstr(buff, "cmd=lightTimer")) return CMD_LIGHT_TIMER;
     if (strstr(buff, "cmd=register")) return CMD_REGISTER;
     if (strstr(buff, "cmd=heartbeat")) return CMD_HEARTBEAT;
     if (strstr(buff, "cmd=lightON")) return CMD_LIGHTON;
@@ -422,6 +460,14 @@ byte ARiFClass::getLastShadePosition() {
 
 byte ARiFClass::getLastShadeTilt() {
   return lastShadeTilt;
+}
+
+byte ARiFClass::getLastLightType() {
+  return lastLightType;
+}
+
+unsigned long ARiFClass::getLastLightTimer() {
+  return lastLightTimer;
 }
 
 void ARiFClass::deregister() {

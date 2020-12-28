@@ -11,8 +11,9 @@ Light::Light() {
   //init();
 }
 
-void Light::init(byte lightID) {
+void Light::init(byte lightID, byte type) {
   this->lightID = lightID;
+  this->type = type;
   this->outPin = Platform.getLightOutPin(lightID);
   this->inPin = Platform.getLightInPin(lightID);
   Platform.setInPinMode(inPin);
@@ -31,7 +32,26 @@ void Light::init(byte lightID) {
 
   buttonHold = { 0, 1000, true };
 
+  timer = DIGITOUT_DEFAULT_TIMER;
+  onTimer = { 0, timer * 1000, true };
+  
   justToggled = false;
+}
+
+void Light::setType(byte type) {
+  this->type = type;
+  if (type == DIGITOUT_TIMER) {
+    this->timer = DIGITOUT_DEFAULT_TIMER;
+  }
+}
+
+void Light::setTimer(unsigned long timer) {
+  this->timer = timer;
+  this->onTimer.tTimeout = timer;
+}
+
+byte Light::getType() {
+  return this->type;
 }
 
 byte Light::getDevID() {
@@ -39,6 +59,11 @@ byte Light::getDevID() {
 }
 
 byte Light::isPressed() {
+  if (timeCheck(&onTimer)) {
+    Serial.println("Turning off light after timer expired.");
+    setOFF();
+  }
+  
   inPinState = Settings::getInputPinValue(inPin);
   if (inPinState == HIGH) { /* Button pressed and held */
     if (!inPinPressed) { /* at the moment of pressing start counting time */
@@ -69,6 +94,9 @@ void Light::setON() {
   Platform.setOutputPinValue(outPin, Light::high);
   outPinState = Light::high;
   justToggled = true;
+  if (type == DIGITOUT_TIMER) {
+      timeRun(&onTimer);
+  }
 }
 
 void Light::setOFF() {
@@ -81,6 +109,9 @@ void Light::toggle() {
   if (outPinState == Light::low) {
     outPinState = Light::high;
     Platform.setOutputPinValue(outPin, Light::high);
+    if (type == DIGITOUT_TIMER) {
+      timeRun(&onTimer);
+    }
   } else {
     outPinState = Light::low;
     Platform.setOutputPinValue(outPin, Light::low);

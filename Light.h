@@ -3,6 +3,16 @@
 #ifndef LIGHT_H_
 #define LIGHT_H_
 
+/* types of digitOUT devices */
+#define DIGITOUT_ONOFF   0     /* Upon activation it changes the state of the output pin from on to off or vice-versa */
+#define DIGITOUT_TIMER   1     /* Upon activation it changes the state of the output pin to on for an amount of time, after that it goes to off */
+#define DIGITOUT_FAIL  100     /* value to indicated failed/unreadable value */
+
+/* other default values */
+
+/* default timer for timer type lights (in seconds) */
+#define DIGITOUT_DEFAULT_TIMER    30000
+
 class Light {
   /* types definitions */
   typedef struct t  {
@@ -12,6 +22,14 @@ class Light {
   };
   
   private:
+    /* Device type */
+    byte type;
+
+    /* timer value for DIGITOUT_TIMER type */
+    unsigned long timer;
+    t onTimer;
+    
+    /* ID of the device */
     byte lightID;
 
     /* vars holds the number of the input and output pins */
@@ -47,7 +65,16 @@ class Light {
     Light();
     
     /* Initialization function for the constructor */
-    void init(byte shadeID);
+    void init(byte shadeID, byte type);
+
+    /* sets the light type */
+    void Light::setType(byte type);
+
+    /* returns the light type */
+    byte Light::getType();
+
+    /* sets the timer */
+    void Light::setTimer(unsigned long timer);
     
     /* get devID value */
     byte Light::getDevID();
