@@ -23,18 +23,20 @@
 #define VER_LGHT_1  1
 
 /* ARiF messages different CMD codes & values returned by the update() in case CMD is captured */
-#define CMD_REGISTER    0
-#define CMD_HEARTBEAT   1
-#define CMD_LIGHTON     2
-#define CMD_LIGHTOFF    3
-#define CMD_SHADEPOS    4
-#define CMD_SHADETILT   5
-#define CMD_SHADEUP     6
-#define CMD_SHADEDOWN   7
-#define CMD_SHADESTOP   8
-#define CMD_LIGHT_TYPE  9
-#define CMD_LIGHT_TIMER 10
-#define CMD_UNKNOWN     11
+#define CMD_REGISTER     0
+#define CMD_HEARTBEAT    1
+#define CMD_LIGHTON      2
+#define CMD_LIGHTOFF     3
+#define CMD_SHADEPOS     4
+#define CMD_SHADETILT    5
+#define CMD_SHADEUP      6
+#define CMD_SHADEDOWN    7
+#define CMD_SHADESTOP    8
+#define CMD_LIGHT_TYPE   9
+#define CMD_LIGHT_TIMER  10
+#define CMD_CTRL_ON      11
+#define CMD_CTRL_OFF     12
+#define CMD_UNKNOWN      200
 
 /* values returned by update() other than the CMDs above */
 #define U_NOTHING       50

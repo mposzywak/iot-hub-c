@@ -26,9 +26,11 @@
 #endif
 
 /* types of physical button press */
-#define PHY_NO_PRESS                0
-#define PHY_MOMENTARY_PRESS         1
-#define PHY_PRESS_MORE_THAN_2SEC    2
+#define PHY_NO_PRESS                          0
+#define PHY_MOMENTARY_PRESS                   1
+#define PHY_PRESS_MORE_THAN_2SEC              2
+#define PHY_CENTRAL_CTRL_MOMENTARY_PRESS      3
+#define PHY_CENTRAL_CTRL_PRESS_MORE_THAN_2SEC 4
 
 /* indexes for EEPROM information holding */
 #define EEPROM_IDX_ARDID    0  // length 1
@@ -36,7 +38,8 @@
 #define EEPROM_IDX_REG      2  // length 1
 #define EEPROM_IDX_RASPYIP  3  // length 6
 #define EEPROM_IDX_MODE     9  // length 1
-#define EEPROM_IDX_LIGHTS   10 // length 150 -> 30 (lights) x 5 (1 type + 4 timer)
+#define EEPROM_IDX_LIGHTS   10 // length 210 -> 30 (lights) x 6 (1 status + 1 type + 4 timer)  + 30 (buffer for future use)
+#define EEPROM_IDX_CENT_CTRL 220 // length 
 
 /* functional modes of the entire device */
 #define MODE_LIGHTS 0
@@ -154,6 +157,15 @@ class Settings {
 
     /* Write light status into the EEPROM */
     static void EEPROMSetLightStatus(byte devID, byte status);
+
+    /* get last devID from the array of lightIDs */
+    static byte getLastLightDevID();
+
+    /* Write Central Control mode to the EEPROM */
+    static void EEPROMSetLightCentral(byte mode);
+
+    /* Read Central Control mode from the EEPROM */
+    static byte EEPROMGetLightCentral();
 };
 
 extern Settings Platform;
