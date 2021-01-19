@@ -107,21 +107,16 @@ void setup() {
     unsigned long timer;
     for (int i = 0; i < LIGHTS; i++) {
       type = Platform.EEPROMGetLightType(Platform.lightIDs[i]);
-      Serial.print("init light: type: ");
-      Serial.println(type);
       if (type == DIGITOUT_ONOFF) {
         lights[i].init(Platform.lightIDs[i], DIGITOUT_ONOFF);
         WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_ONOFF);
       } else if (type == DIGITOUT_TIMER) {
         timer = Platform.EEPROMGetLightTimer(Platform.lightIDs[i]);
-        Serial.print("init light: timer: ");
-        Serial.println(timer);
         lights[i].init(Platform.lightIDs[i], DIGITOUT_TIMER);
         lights[i].setTimer(timer);
         WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_TIMER);
         WebGUI.lightSetTimer(Platform.lightIDs[i], timer);
       } else {
-        Serial.println("init light: type unrecognized");
         lights[i].init(Platform.lightIDs[i], DIGITOUT_ONOFF);
         WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_ONOFF);
         Platform.EEPROMSetLightConfig(Platform.lightIDs[i], DIGITOUT_ONOFF, DIGITOUT_DEFAULT_TIMER);
@@ -169,10 +164,18 @@ void setup() {
     ARiF.setMode(M_LIGHTS);
   }
 
+  /* Read the light Central Control setting and set Light class global mode */
+  byte centralCtrlMode;
+  centralCtrlMode = Platform.EEPROMGetLightCentral();
+  if (centralCtrlMode == DIGITOUT_CENTRAL_CTRL_ENABLE) {
+    Light::enableCentralCtrl();
+  } else if (centralCtrlMode == DIGITOUT_CENTRAL_CTRL_DISABLE) {
+    Light::disableCentralCtrl();
+  } else {
+    Light::disableCentralCtrl();
+  }
 
   WebGUI.begin();
-  /* uncomment below code to clear the registration bit in the the EEPROM manually */
-  //EEPROM.write(EEPROM_IDX_REG, (byte) false);
 
   Serial.println("Setup complete!");
 }
@@ -265,23 +268,45 @@ void loop() {
       -----------------------------
     */
   } else if (funcMode == MODE_LIGHTS) {
+    byte devID;
+    byte pressResult;
     for (int i = 0; i < LIGHTS; i++) {
-      byte devID = lights[i].getDevID();
-      byte pressResult = lights[i].isPressed();
+      devID = lights[i].getDevID();
+      pressResult = lights[i].isPressed();
 
       if (pressResult == PHY_MOMENTARY_PRESS) {
         lights[i].toggle();
       } else if (pressResult == PHY_PRESS_MORE_THAN_2SEC) {
         lights[i].toggle();
+      } else if (pressResult == PHY_CENTRAL_CTRL_MOMENTARY_PRESS) {
+        byte devIDCentralPress;
+        for (int j = 0; j < LIGHTS; j++) {
+          if (lights[j].getType() == DIGITOUT_ONOFF) {
+            devIDCentralPress = lights[j].getDevID();
+            lights[j].setON();
+            WebGUI.lightSetON(devIDCentralPress);
+            ARiF.sendLightON(devIDCentralPress);
+            delay(DIGITOUT_CENTRAL_CTRL_DELAY);
+          }
+        }
+      } else if (pressResult == PHY_CENTRAL_CTRL_PRESS_MORE_THAN_2SEC) {
+        byte devIDCentralPress;
+        for (int j = 0; j < LIGHTS; j++) {
+          if (lights[j].getType() == DIGITOUT_ONOFF) {
+            devIDCentralPress = lights[j].getDevID();
+            lights[j].setOFF();
+            WebGUI.lightSetOFF(devIDCentralPress);
+            ARiF.sendLightOFF(devIDCentralPress);
+            delay(DIGITOUT_CENTRAL_CTRL_DELAY);
+          }
+        }
       }
 
       if (lights[i].justTurnedON()) {
-        Serial.println("just toggled on");
         WebGUI.lightSetON(devID);
         ARiF.sendLightON(devID);
       }
       if (lights[i].justTurnedOFF()) {
-        Serial.println("just toggled off");
         WebGUI.lightSetOFF(devID);
         ARiF.sendLightOFF(devID);
       }
@@ -464,6 +489,14 @@ void loop() {
         }
       }
       WebGUI.lightSetTimer(lastDevID, ARiF.getLastLightTimer());
+      break;
+    case CMD_CTRL_ON:
+      Light::enableCentralCtrl();
+      Platform.EEPROMSetLightCentral(DIGITOUT_CENTRAL_CTRL_ENABLE);
+      break;
+    case CMD_CTRL_OFF:
+      Light::disableCentralCtrl();
+      Platform.EEPROMSetLightCentral(DIGITOUT_CENTRAL_CTRL_DISABLE);
       break;
     case CMD_UNKNOWN:                                  /* unknown command received */
       Serial.print("Received unknown command from: ");

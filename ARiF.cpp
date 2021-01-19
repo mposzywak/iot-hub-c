@@ -315,6 +315,8 @@ static long ARiFClass::getValue(char *buff, int value) {
     if (strstr(buff, "cmd=shadeUP")) return CMD_SHADEUP;
     if (strstr(buff, "cmd=shadeDOWN")) return CMD_SHADEDOWN;
     if (strstr(buff, "cmd=shadeSTOP")) return CMD_SHADESTOP;
+    if (strstr(buff, "cmd=ctrlON")) return CMD_CTRL_ON;
+    if (strstr(buff, "cmd=ctrlOFF")) return CMD_CTRL_OFF;
     return CMD_UNKNOWN;
   }
 }

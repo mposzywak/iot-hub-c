@@ -6,12 +6,20 @@
 /* types of digitOUT devices */
 #define DIGITOUT_ONOFF   0     /* Upon activation it changes the state of the output pin from on to off or vice-versa */
 #define DIGITOUT_TIMER   1     /* Upon activation it changes the state of the output pin to on for an amount of time, after that it goes to off */
-#define DIGITOUT_FAIL  100     /* value to indicated failed/unreadable value */
+#define DIGITOUT_UNK  100     /* value to indicated failed/unreadable value */
 
 /* other default values */
 
 /* default timer for timer type lights (in seconds) */
 #define DIGITOUT_DEFAULT_TIMER    30000
+
+/* default central control setting */
+#define DIGITOUT_CENTRAL_CTRL_ENABLE  1
+#define DIGITOUT_CENTRAL_CTRL_DISABLE 0
+#define DIGITOUT_CENTRAL_CTRL_UNK   100
+
+/* central control light delay */
+#define DIGITOUT_CENTRAL_CTRL_DELAY 200
 
 class Light {
   /* types definitions */
@@ -55,6 +63,7 @@ class Light {
     /* holds state of device just being toggled */
     bool justToggled;
 
+    static byte centralControlEnabled;
 
   public:
 
@@ -102,6 +111,17 @@ class Light {
 
     /* reset the light device - this function supposed to be executed only when the mode is changed from lights to something else */
     void Light::reset();
+
+    /* enable Central Control of the lights */
+    static void enableCentralCtrl();
+
+    /* disable Central Control of the lights */
+    static void disableCentralCtrl();
+
+    /* get the state of the Central Control of the lights */
+    static byte getCentralCtrl();
+
 };
+
 
 #endif

@@ -209,6 +209,10 @@ static bool Settings::getHigh() {
     return LOW;
 }
 
+static byte Settings::getLastLightDevID() {
+  return lightIDs[LIGHTS - 1];
+}
+
 static byte Settings::getLightOutPin(byte lightID) {
   return Settings::digitOUT[(lightID - 1)];
 }
@@ -385,10 +389,6 @@ static unsigned long Settings::EEPROMReadlong(unsigned long address) {
 
   value = ((four << 0) & 0xFF) + ((three << 8) & 0xFFFF) + ((two << 16) & 0xFFFFFF) + ((one << 24) & 0xFFFFFFFF);
 
-  Serial.print("Reading value: ");
-  Serial.print(value);
-  Serial.print(" From address: ");
-  Serial.println(address);
   return value;
 }
 
@@ -402,9 +402,14 @@ static void Settings::EEPROMWritelong(int address, unsigned long value) {
   EEPROM.write(address + 1, three);
   EEPROM.write(address + 2, two);
   EEPROM.write(address + 3, one);
+}
 
-  Serial.print("Writing value: ");
-  Serial.print(value);
-  Serial.print(" To address: ");
-  Serial.println(address);
+static void Settings::EEPROMSetLightCentral(byte mode) {
+  EEPROM.write(EEPROM_IDX_CENT_CTRL, mode);
+}
+
+static byte Settings::EEPROMGetLightCentral() {
+  byte mode;
+  mode = EEPROM.read(EEPROM_IDX_CENT_CTRL);
+  return mode;
 }

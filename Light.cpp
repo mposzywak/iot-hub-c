@@ -4,7 +4,7 @@
 byte Light::low = Settings::getLow();
 byte Light::high = Settings::getHigh();
 
-
+static byte Light::centralControlEnabled;
 
 Light::Light() {
 
@@ -78,9 +78,19 @@ byte Light::isPressed() {
 
       /* EXECUTED ON BUTTON RELEASE - END */
       if (timeCheck(&buttonHold)) {
+        if (this->lightID == Platform.getLastLightDevID() && getCentralCtrl() == DIGITOUT_CENTRAL_CTRL_ENABLE) {
+          Serial.println("Central ON pressed and hel");
+          inPinPressed = false;
+          return PHY_CENTRAL_CTRL_PRESS_MORE_THAN_2SEC;
+        }
         Serial.println("Held up above 2 sec");
         inPinPressed = false;
         return PHY_PRESS_MORE_THAN_2SEC;
+      }
+      if (this->lightID == Platform.getLastLightDevID() && getCentralCtrl() == DIGITOUT_CENTRAL_CTRL_ENABLE) {
+        Serial.println("Central ON mementary pressed");
+        inPinPressed = false;
+        return PHY_CENTRAL_CTRL_MOMENTARY_PRESS;
       }
       inPinPressed = false;
       return PHY_MOMENTARY_PRESS;
@@ -163,4 +173,16 @@ void Light::reset() {
   Platform.setOutputPinValue(outPin, Light::low);
   outPinState = Light::low;
   justToggled = false;
+}
+
+static void Light::enableCentralCtrl() {
+  centralControlEnabled = DIGITOUT_CENTRAL_CTRL_ENABLE;
+}
+
+static void Light::disableCentralCtrl() {
+  centralControlEnabled = DIGITOUT_CENTRAL_CTRL_DISABLE;
+}
+
+static byte Light::getCentralCtrl() {
+  return centralControlEnabled;
 }

@@ -144,23 +144,23 @@ static void WebGUIClass::sendWebGUIHTML(EthernetClient client) {
   client.println(F("<h1>Velen IoT System</h1>"));
 
   /* System Status box */
-  client.println("<div class=\"IO_box\">");
-  client.println("<h2>System Status</h2>");
-  client.println("<div> Version: 1.1.0 </div>");
-  client.println("<div id=\"uptime\"> Uptime : --</div>");
-  client.println("</div>");
+  client.println(F("<div class=\"IO_box\">"));
+  client.println(F("<h2>System Status</h2>"));
+  client.println(F("<div> Version: 1.1.0 </div>"));
+  client.println(F("<div id=\"uptime\"> Uptime : --</div>"));
+  client.println(F("</div>"));
 
   /* Registration box */
-  client.println("<div class=\"IO_box\">");
-  client.println("<h2>Registration Status</h2>");
-  client.println("<br>");
-  client.println("<div id=\"reg-status\">Registration Status: --</div>");
-  client.println("<div id=\"ardid\">ArdID    : --</div>");
-  client.println("<div id=\"raspyid\">RaspyID  : --</div>");
-  client.println("<div id=\"raspyip\">Raspy IP : --</div>");
-  client.println("<br>");
-  client.println("<button type=\"button\" id=\"deregister\" onclick=\"GetButton1()\">Deregister</button><br /><br />");
-  client.println("</div>");
+  client.println(F("<div class=\"IO_box\">"));
+  client.println(F("<h2>Registration Status</h2>"));
+  client.println(F("<br>"));
+  client.println(F("<div id=\"reg-status\">Registration Status: --</div>"));
+  client.println(F("<div id=\"ardid\">ArdID    : --</div>"));
+  client.println(F("<div id=\"raspyid\">RaspyID  : --</div>"));
+  client.println(F("<div id=\"raspyip\">Raspy IP : --</div>"));
+  client.println(F("<br>"));
+  client.println(F("<button type=\"button\" id=\"deregister\" onclick=\"GetButton1()\">Deregister</button><br /><br />"));
+  client.println(F("</div>"));
 
   /* System Settings */
   client.println("<div class=\"IO_box\">");
