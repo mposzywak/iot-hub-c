@@ -14,9 +14,10 @@ static byte cmd;
 static byte mode;
 static WebShade WebGUIClass::shades[SHADES];
 static WebLight WebGUIClass::lights[LIGHTS];
+static byte WebGUIClass::SDStatus;
 
 static void WebGUIClass::begin() {
-  Serial.println("Starting WebGUI server");
+  Serial.println(F("Starting WebGUI server"));
   WebGUIServer.begin();
 }
 
@@ -24,7 +25,7 @@ static byte WebGUIClass::update() {
   cmd = CMD_WEBGUI_NOTHING;
   EthernetClient client = WebGUIServer.available();
   if (client) {
-    Serial.print("WebGUI: HTTP Request received from: ");
+    Serial.print(F("WebGUI: HTTP Request received from: "));
     Serial.println(client.remoteIP());
     char buff[WEBGUI_HTTP_BUFF];
     int index = 0;
@@ -62,14 +63,44 @@ static byte WebGUIClass::update() {
         /* nothing here */
       }
       client.println(F(HTTP_200_OK));
-      sendWebGUIHTML(client);
+      sendWebGUIHTML(client); 
+      client.println();
+      client.stop();
+    } else if (strstr(buff, "main.css")) {
+      Serial.println(F("HTTP GET for main.css received"));
+      if (getSDStatus() == SD_WEBGUI_AVAIL) {
+        
+        client.println(F(HTTP_200_OK_CSS));
+        sendWebGUICSS(client);
+      } else {
+        Serial.println(F("HTTP GET for main.css unavailable"));
+        client.println(F(HTTP_404_NF));
+      }
+      client.println();
+      client.stop();
+    } else if (strstr(buff, "main.js")) {
+      Serial.println(F("HTTP GET for main.js received"));
+      if (getSDStatus() == SD_WEBGUI_AVAIL) {
+        
+        client.println(F(HTTP_200_OK_JS));
+        sendWebGUIJS(client);
+      } else {
+        Serial.println(F("HTTP GET for main.js unavailable"));
+        client.println(F(HTTP_404_NF));
+      }
       client.println();
       client.stop();
     } else {
       /* regular HTTP GET */
-      Serial.println("HTTP GET received");
+      Serial.println(F("HTTP GET for main page received"));
       client.println(F(HTTP_200_OK));
-      sendWebGUIHTML(client);
+      if (getSDStatus() == SD_WEBGUI_AVAIL) {
+        
+        sendWebGUIHTML(client);
+      } else {
+        Serial.println(F("HTTP GET - sending stub HTML"));
+        sendWebGUIHTMLStub(client);
+      }
       client.println();
       client.stop();
     }
@@ -82,9 +113,6 @@ static byte WebGUIClass::update() {
 }
 
 static void WebGUIClass::setInfoRegistered(byte aID, byte rID, IPAddress rIP) {
-  Serial.println("Registration logged: ");
-  Serial.print("raspyID: ");
-  Serial.println(raspyID);
   registered = true;
   ardID = aID;
   raspyID = rID;
@@ -137,8 +165,10 @@ static void WebGUIClass::sendWebGUIHTML(EthernetClient client) {
   client.println(F("<html>"));
   client.println(F("<head>"));
   client.println(F("<title>Velen IoT System</title>"));
-  client.println(F("<script type=\"text/javascript\" src=\"http://37.46.83.239/velen-main.js\"> </script>"));
-  client.println(F("<link rel=\"stylesheet\" type=\"text/css\" href=\"http://37.46.83.239/velen-main.css\" media=\"all\" />"));
+  //client.println(F("<script type=\"text/javascript\" src=\"http://37.46.83.239/velen-main.js\"> </script>"));
+  //client.println(F("<link rel=\"stylesheet\" type=\"text/css\" href=\"http://37.46.83.239/velen-main.css\" media=\"all\" />"));
+  client.println(F("<script type=\"text/javascript\" src=\"velen-main.js\"> </script>"));
+  client.println(F("<link rel=\"stylesheet\" type=\"text/css\" href=\"velen-main.css\" media=\"all\" />"));
   client.println(F("</head>"));
   client.println(F("<body onload=\"GetArduinoIO()\">"));
   client.println(F("<h1>Velen IoT System</h1>"));
@@ -163,97 +193,131 @@ static void WebGUIClass::sendWebGUIHTML(EthernetClient client) {
   client.println(F("</div>"));
 
   /* System Settings */
-  client.println("<div class=\"IO_box\">");
-  client.println("<h2>System Settings</h2>");
-  client.println("<div> Device Type </div>");
-  client.println("<form action=\"/settings\" method=\"get\">");
-  client.println("<label for=\"types\">Choose the device type </label>");
-  client.println("<select name=\"types\" id=\"types\">");
+  client.println(F("<div class=\"IO_box\">"));
+  client.println(F("<h2>System Settings</h2>"));
+  client.println(F("<div> Device Type </div>"));
+  client.println(F("<form action=\"/settings\" method=\"get\">"));
+  client.println(F("<label for=\"types\">Choose the device type </label>"));
+  client.println(F("<select name=\"types\" id=\"types\">"));
   if (mode == M_WEBGUI_LIGHTS) {
-    client.println("<option value=\"lights\" selected=\"selected\">Lights</option>");
-    client.println("<option value=\"shades\">Shades</option>");
+    client.println(F("<option value=\"lights\" selected=\"selected\">Lights</option>"));
+    client.println(F("<option value=\"shades\">Shades</option>"));
   } else if (mode = M_WEBGUI_SHADES) {
-    client.println("<option value=\"lights\">Lights</option>");
-    client.println("<option value=\"shades\" selected=\"selected\">Shades</option>");
+    client.println(F("<option value=\"lights\">Lights</option>"));
+    client.println(F("<option value=\"shades\" selected=\"selected\">Shades</option>"));
   }
-  client.println("</select>");
-  client.println("<input type=\"submit\" value=\"Save\">");
-  client.println("</form>");
-  client.println("</div>");
+  client.println(F("</select>"));
+  client.println(F("<input type=\"submit\" value=\"Save\">"));
+  client.println(F("</form>"));
+  client.println(F("</div>"));
 
   /* Device Status and Control */
 
   if (mode == M_WEBGUI_LIGHTS) {
     for (int i = 0; i < LIGHTS; i++) {
-      client.println("<div class=\"IO_box\">");
-      client.print("<h2>DevID: ");
+      client.println(F("<div class=\"IO_box\">"));
+      client.print(F("<h2>DevID: "));
       client.print(lights[i].devID);
-      client.println(" Data</h2>");
+      client.println(F(" Data</h2>"));
 
-      client.println("<div class=\"device\">");
+      client.println(F("<div class=\"device\">"));
 
       /* light status DIV */
-      client.print("<div id=\"light-status\">Status    : ");
+      client.print(F("<div id=\"light-status\">Status    : "));
       if (lights[i].status) {
-        client.print("ON");
+        client.print(F("ON"));
       } else {
-        client.print("OFF");
+        client.print(F("OFF"));
       }
-      client.println("</div>");
+      client.println(F("</div>"));
 
       /* light type timer DIVs */
       if (lights[i].type == S_WEBGUI_L_TIMER) {
-        client.print("<div>Timer    : ");
+        client.print(F("<div>Timer    : "));
         client.print(lights[i].timer);
-        client.println("ms </div>");
+        client.println(F("ms </div>"));
       }
          
-      client.println("</div>");
-      client.println("</div>");
+      client.println(F("</div>"));
+      client.println(F("</div>"));
     }
 
   } else if (mode == M_WEBGUI_SHADES) {
     for (int i = 0; i < SHADES; i++) {
-      client.println("<div class=\"IO_box\">");
-      client.print("<h2>DevID: ");
+      client.println(F("<div class=\"IO_box\">"));
+      client.print(F("<h2>DevID: "));
       client.print(shades[i].devID);
-      client.println(" Data</h2>");
+      client.println(F(" Data</h2>"));
 
-      client.println("<div class=\"device\">");
-      //client.println("<button type=\"button\" id=\"up\" onclick=\"sendUp()\">Up</button>");
-      //client.println("<button type=\"button\" id=\"stop\" onclick=\"sendUp()\">Stop</button>");
-      //client.println("<button type=\"button\" id=\"down\" onclick=\"sendUp()\">Down</button><br><br>");
+      client.println(F("<div class=\"device\">"));
       if (shades[i].sync == S_WEBGUI_UNSYNC) {
-        client.println("<div id=\"shade-status\">Status    : unsync</div>");
-        client.println("<div id=\"shade-pos\">Pos       : --</div>");
-        client.println("<div id=\"shade-tilt\">Tilt      : --</div><br>");
+        client.println(F("<div id=\"shade-status\">Status    : unsync</div>"));
+        client.println(F("<div id=\"shade-pos\">Pos       : --</div>"));
+        client.println(F("<div id=\"shade-tilt\">Tilt      : --</div><br>"));
       } else if (shades[i].sync == S_WEBGUI_SYNC ) {
         if (shades[i].direction == S_WEBGUI_UP ) {
-          client.println("<div id=\"shade-status\">Status    : UP</div>");
+          client.println(F("<div id=\"shade-status\">Status    : UP</div>"));
         } else if (shades[i].direction == S_WEBGUI_DOWN ) {
-          client.println("<div id=\"shade-status\">Status    : DOWN</div>");
+          client.println(F("<div id=\"shade-status\">Status    : DOWN</div>"));
         } else if (shades[i].direction == S_WEBGUI_STOP ) {
-          client.println("<div id=\"shade-status\">Status    : STOPPED</div>");
+          client.println(F("<div id=\"shade-status\">Status    : STOPPED</div>"));
         }
-        client.print("<div id=\"shade-pos\">Pos       : ");
+        client.print(F("<div id=\"shade-pos\">Pos       : "));
         client.print(shades[i].position);
-        client.println(" </div>");
-        client.print("<div id=\"shade-tilt\">Tilt      : ");
+        client.println(F(" </div>"));
+        client.print(F("<div id=\"shade-tilt\">Tilt      : "));
         client.print(shades[i].tilt);
-        client.println(" </div><br>");
+        client.println(F(" </div><br>"));
       }
-
-      //client.println("<div id=\"shade-pos\">Pos       : --</div>");
-      //client.println("<div id=\"shade-tilt\">Tilt      : --</div><br>");
-      //client.println("<button type=\"button\" id=\"tilt-up\" onclick=\"tiltUp()\">Tilt up</button>");
-      //client.println("<button type=\"button\" id=\"tilt-down\" onclick=\"tiltDown()\">Tilt Down</button><br><br>");
-      client.println("</div>");
-      client.println("</div>");
+      client.println(F("</div>"));
+      client.println(F("</div>"));
     }
   }
 
-  client.println("</body>");
-  client.println("</html>");
+  client.println(F("</body>"));
+  client.println(F("</html>"));
+}
+
+static void WebGUIClass::sendWebGUIHTMLStub(EthernetClient client) {
+  client.println(F("<html>"));
+  client.println(F("<head>"));
+  client.println(F("<title>Velen IoT System</title>"));
+  client.println(F("</head>"));
+  client.println(F("<body"));
+  client.println(F("<h1>Velen IoT System</h1>"));
+  client.println(F("<h3>HTML files not available on SD Card</h3>"));
+  client.println(F("</body>"));
+  client.println(F("</html>"));
+}
+
+static void WebGUIClass::sendWebGUICSS(EthernetClient client) {
+  if (getSDStatus() == SD_WEBGUI_AVAIL) {
+    File dataFile = Platform.SDCardFileOpen("MAIN.CSS");
+    if (dataFile) {
+      while (dataFile.available()) {
+        //Serial.write(dataFile.read());
+        client.write(dataFile.read());
+      }
+      dataFile.close();
+    }
+  } else {
+    
+  }
+}
+
+static void WebGUIClass::sendWebGUIJS(EthernetClient client) {
+  if (getSDStatus() == SD_WEBGUI_AVAIL) {
+    File dataFile = Platform.SDCardFileOpen("MAIN.JS");
+    if (dataFile) {
+      while (dataFile.available()) {
+        //Serial.write(dataFile.read());
+        client.write(dataFile.read());
+      }
+      dataFile.close();
+    }
+  } else {
+    
+  }
 }
 
 static bool WebGUIClass::deregPressed(char *buff) {
@@ -342,4 +406,16 @@ static void WebGUIClass::lightSetTimer(byte devID, unsigned long timer) {
       lights[i].timer = timer;
     }
   }
+}
+
+static void WebGUIClass::setSDStatusAvailable() {
+  SDStatus = SD_WEBGUI_AVAIL;
+}
+
+static void WebGUIClass::setSDStatusUnavailable() {
+  SDStatus = SD_WEBGUI_UNAVAIL;
+}
+
+static byte WebGUIClass::getSDStatus() {
+  return SDStatus;
 }

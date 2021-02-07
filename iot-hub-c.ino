@@ -135,6 +135,13 @@ void setup() {
   /* initialize various platform dependend settings */
   Platform.initPlatform();
 
+  /* initialize the SD Card */
+  if (Platform.SDCardInit() == SD_INIT_SUCCESS) {
+    WebGUI.setSDStatusAvailable();
+  } else {
+    WebGUI.setSDStatusUnavailable();
+  }
+
   /* get the registration data from EEPROM */
   isRegistered = Platform.EEPROMIsRegistered();
   //isRegistered = false;
