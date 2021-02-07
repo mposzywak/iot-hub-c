@@ -2,6 +2,8 @@
 #include <Arduino.h>
 #include <EEPROM.h>
 #include <Ethernet.h>
+#include <SPI.h>
+#include <SD.h>
 
 #ifndef SETTINGS_H_
 #define SETTINGS_H_
@@ -45,6 +47,15 @@
 #define MODE_LIGHTS 0
 #define MODE_SHADES 1
 #define MODE_FAIL   100 /* returned by EEPROMGetMode() if couldn't load mode from EEPROM */
+
+
+/* SD Card variables */
+#define SD_ARD_MEGA_CS  4
+
+#define SD_INIT_NOHW        0
+#define SD_INIT_SUCCESS     1
+#define SD_INIT_NOFILE      2
+
 
 
 class Settings {
@@ -166,6 +177,19 @@ class Settings {
 
     /* Read Central Control mode from the EEPROM */
     static byte EEPROMGetLightCentral();
+
+    /*
+     * SD Card related functions
+     */
+
+    /* initialize the SD Card */
+    static byte SDCardInit();
+
+    /* Open selected file */
+    static File SDCardFileOpen(char *filename);
+
+    /* Close the file */
+    static void SDCardFileClose(File file);
 };
 
 extern Settings Platform;

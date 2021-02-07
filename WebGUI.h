@@ -10,6 +10,9 @@
 
 #define HTTP_200_OK     "HTTP/1.1 200 OK\nContent-Type: text/html\nConnnection: close\n\n"
 #define HTTP_200_OK_XML "HTTP/1.1 200 OK\nContent-Type: text/xml\nConnnection: keep-alive\n"
+#define HTTP_200_OK_JS  "HTTP/1.1 200 OK\nContent-Type: application/javascript\nConnnection: close\n\n"
+#define HTTP_200_OK_CSS "HTTP/1.1 200 OK\nContent-Type: text/css\nConnnection: close\n\n"
+#define HTTP_404_NF     "HTTP/1.1 404\nContent-Type: text/html\nConnnection: close\n\n"
 
 /* WebGUI actions that are communicated outside of the library */
 #define CMD_WEBGUI_DEREGISTER   0
@@ -41,6 +44,10 @@
 #define S_WEBGUI_L_ONOFF  0
 #define S_WEBGUI_L_TIMER 1
 
+/* SD Card active state */
+#define SD_WEBGUI_UNAVAIL  0
+#define SD_WEBGUI_AVAIL    1
+
 /* shade tracking object */
 typedef struct WebShade {
   byte devID;
@@ -62,6 +69,9 @@ class WebGUIClass {
 
   private:
 
+    /* SD Card status */
+    static byte SDStatus;
+
     /* array for holding all shades state */
     static WebShade shades[SHADES];
 
@@ -76,6 +86,15 @@ class WebGUIClass {
 
     /* function to generate static HTML file */
     static void WebGUIClass::sendWebGUIHTML(EthernetClient cl);
+
+    /* function to generate static HTML file when SD Card HTML contents are not available */
+    static void WebGUIClass::sendWebGUIHTMLStub(EthernetClient client);
+
+    /* send the requested CSS File */
+    static void WebGUIClass::sendWebGUICSS(EthernetClient client);
+
+    /* send the requested JS File */
+    static void WebGUIClass::sendWebGUIJS(EthernetClient client);
 
     /* detect if the deregistration button has been pressed on the WebGUI */
     static bool WebGUIClass::deregPressed(char *buff);
@@ -122,6 +141,15 @@ class WebGUIClass {
 
     /* set light timer */
     static void WebGUIClass::lightSetTimer(byte devID, unsigned long timer);
+
+    /* set SD Card status as Available */
+    static void WebGUIClass::setSDStatusAvailable();
+
+    /* set SD Card status as Unavailable */
+    static void WebGUIClass::setSDStatusUnavailable();
+
+    /* return the SD Card status */
+    static byte WebGUIClass::getSDStatus();
 
 };
 

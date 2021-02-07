@@ -413,3 +413,48 @@ static byte Settings::EEPROMGetLightCentral() {
   mode = EEPROM.read(EEPROM_IDX_CENT_CTRL);
   return mode;
 }
+
+static byte Settings::SDCardInit() {
+#if defined(CONTROLLINO_MEGA)
+  /* no support on Controllino for SD Card */
+#elif defined(CONTROLLINO_MAXI) 
+  /* no support on Controllino for SD Card */
+#elif defined(ARDUINO_AVR_MEGA2560)
+  pinMode(SD_ARD_MEGA_CS, OUTPUT);     /* set the Select pin */
+  digitalWrite(SD_ARD_MEGA_CS, LOW);   /* set the SD Card CS to LOW to for the time of SD initialization */
+  delay(500);
+
+  if (!SD.begin(SD_ARD_MEGA_CS))
+  {
+    Serial.println("Comm issue.");
+    Serial.println("FAIL");
+    digitalWrite(SD_ARD_MEGA_CS, HIGH);
+    return SD_INIT_NOHW;
+  }
+  if (!SD.exists("MAIN.CSS")) {
+    Serial.println("ERROR - Can't find MAIN.CSS file!");
+    digitalWrite(SD_ARD_MEGA_CS, HIGH);
+    return SD_INIT_NOFILE;
+  } else {
+    if (!SD.exists("MAIN.JS")) {
+      Serial.println("ERROR - Can't find MAIN.JS file!");
+      digitalWrite(SD_ARD_MEGA_CS, HIGH);
+      return SD_INIT_NOFILE;
+    } else {
+      Serial.println("SUCCESS - All files present!");
+      digitalWrite(SD_ARD_MEGA_CS, HIGH);
+      return SD_INIT_SUCCESS;
+    }
+  }
+#endif
+}
+
+static File Settings::SDCardFileOpen(char *filename) {
+  File file;
+  file = SD.open(filename);
+  return file;
+}
+
+static void Settings::SDCardFileClose(File file) {
+  file.close();
+}
