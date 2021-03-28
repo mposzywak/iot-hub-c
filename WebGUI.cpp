@@ -341,6 +341,9 @@ static void WebGUIClass::lightInit(byte index, byte devID, byte type) {
   lights[index].devID = devID;
   lights[index].status = false;
   lights[index].type = type;
+  if (type == S_WEBGUI_L_ONOFF) {
+    lights[index].timer = 0;
+  }
 }
 
 static void WebGUIClass::shadeSetDirection(byte devID, byte direction) {

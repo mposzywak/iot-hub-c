@@ -53,7 +53,7 @@ byte mac[] = { 0x00, 0xAA, 0xBB, 0xC6, 0xDD, 0x52 };
    ------------------------
 */
 
-/* starting with not registered iot hub (former arduino) TODO: make this value stored on the EEPROM */
+/* starting with not registered iot hub */
 byte ardID = 0;
 byte raspyID = 0;
 
@@ -93,9 +93,27 @@ void setup() {
 
   if (funcMode == MODE_SHADES) {
     /* initialize the shades */
+    byte posTimer;
+    int tiltTimer;
     for (int i = 0; i < SHADES; i++) {
       shades[i].init(Settings::shadeIDs[i]);
       WebGUI.shadeInit(i, Settings::shadeIDs[i]);
+      posTimer = Platform.EEPROMGetShadePosTimer(Platform.shadeIDs[i]);
+      tiltTimer = Platform.EEPROMGetShadeTiltTimer(Platform.shadeIDs[i]);
+      /* if recorded EEPROM value is different than the allowed ones, overwrite EEPROM with default */
+      if (posTimer != Shade::validatePositionTimer(posTimer)) {
+        Platform.EEPROMSetShadePosTimer(Platform.shadeIDs[i], Shade::validatePositionTimer(posTimer));
+      }
+      if (tiltTimer != Shade::validateTiltTimer(tiltTimer)) {
+        Platform.EEPROMSetShadeTiltTimer(Platform.shadeIDs[i], Shade::validateTiltTimer(tiltTimer));
+      }
+
+      Serial.print("EEPROM devID: ");
+      Serial.print(Platform.shadeIDs[i]);
+      Serial.print(" posTimer: ");
+      Serial.print(posTimer);
+      Serial.print(" tiltTimer: ");
+      Serial.println(tiltTimer);
     }
     for (int i = 0; i < LIGHTS; i++) {
       WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_TIMER);
@@ -212,7 +230,7 @@ void loop() {
       /*if (shades[i].update() <= 100) {
         Serial.println("Sending 1 shade position");
         //ARiF.sendShadePosition(shadeIDs[i], shades[i].getCurrentPosition());
-      }*/
+        }*/
 
       byte devID = shades[i].getDevID();
       byte upPressResult = shades[i].isUpPressed();
@@ -334,31 +352,11 @@ void loop() {
       break;
     case CMD_WEBGUI_SET_M_LIGHTS:                     /* Switch Mode to Lights */
       Serial.println("Set Variant to lights");
-      funcMode = MODE_LIGHTS;
-      WebGUI.setSystemMode(M_WEBGUI_LIGHTS);
-      Platform.EEPROMSetMode(MODE_LIGHTS);
-      ARiF.setMode(M_LIGHTS);
-      for (int i = 0; i < SHADES; i++) {
-        shades[i].reset();
-      }
-      for (int i = 0; i < LIGHTS; i++) {
-        lights[i].init(Platform.lightIDs[i], DIGITOUT_TIMER);
-        WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_TIMER);
-      }
+      setModeLights();
       break;
     case CMD_WEBGUI_SET_M_SHADES:                     /* Switch Mode to Shades */
       Serial.println("Set Variant to shades");
-      funcMode = MODE_SHADES;
-      WebGUI.setSystemMode(M_WEBGUI_SHADES);
-      Platform.EEPROMSetMode(MODE_SHADES);
-      ARiF.setMode(M_SHADES);
-      for (int i = 0; i < LIGHTS; i++) {
-        lights[i].reset();
-      }
-      for (int i = 0; i < SHADES; i++) {
-        shades[i].init(Settings::shadeIDs[i]);
-        WebGUI.shadeInit(i, Settings::shadeIDs[i]);
-      }
+      setModeShades();
       break;
     case CMD_WEBGUI_NOTHING:                          /* Do nothing */
       break;
@@ -374,6 +372,8 @@ void loop() {
   byte lastDevID;
   byte lastLightType;
   unsigned long lastLightTimer;
+  int lastShadePositionTimer;
+  int lastShadeTiltTimer;
   switch (ret) {
     case U_CONNECTED:                                  /* ARiF connection with the Raspy has been re-established (or established for the first time) */
       Serial.println("Connected back!");
@@ -402,7 +402,7 @@ void loop() {
     case U_NOTHING:                                    /* Do nothing */
       break;
     case CMD_REGISTER:                                 /* Registered to a Raspy */
-      Serial.println("Registered!");
+      Serial.println(F("Registered!"));
       ardID = ARiF.getArdID();
       raspyID = ARiF.getRaspyID();
       iotGwIP = ARiF.getRaspyIP();
@@ -410,7 +410,7 @@ void loop() {
       Platform.EEPROMRegister(ardID, raspyID, iotGwIP);
       break;
     case CMD_SHADEUP:                                  /* shadeUP command received */
-      Serial.print("ShadeUP received for: ");
+      Serial.print(F("ShadeUP received for: "));
       Serial.println(ARiF.getLastDevID());
       lastDevID = ARiF.getLastDevID();
       for (int i = 0; i < SHADES; i++) {
@@ -418,7 +418,7 @@ void loop() {
       }
       break;
     case CMD_SHADEDOWN:                                /* shadeDOWN command received */
-      Serial.print("ShadeDOWN received for: ");
+      Serial.print(F("ShadeDOWN received for: "));
       Serial.println(ARiF.getLastDevID());
       lastDevID = ARiF.getLastDevID();
       for (int i = 0; i < SHADES; i++) {
@@ -426,7 +426,7 @@ void loop() {
       }
       break;
     case CMD_SHADEPOS:                                 /* shadePOS command received */
-      Serial.print("Shadepos received with value: ");
+      Serial.print(F("Shadepos received with value: "));
       Serial.println(ARiF.getLastShadePosition());
       lastDevID = ARiF.getLastDevID();
       //Serial.println(s.getDevID()); // why s.toPosition() doesn't work??
@@ -435,7 +435,7 @@ void loop() {
       }
       break;
     case CMD_SHADETILT:                                /* shadeTILT command received */
-      Serial.print("Shadetilt received: ");
+      Serial.print(F("Shadetilt received: "));
       Serial.println(ARiF.getLastShadeTilt());
       lastDevID = ARiF.getLastDevID();
       //Serial.println(s.getDevID()); // why s.toPosition() doesn't work??
@@ -444,7 +444,7 @@ void loop() {
       }
       break;
     case CMD_SHADESTOP:                                /* shadeSTOP command received */
-      Serial.println("ShadeSTOP received");
+      Serial.println(F("ShadeSTOP received"));
       lastDevID = ARiF.getLastDevID();
       //Serial.println(s.getDevID()); // why s.toPosition() doesn't work??
       for (int i = 0; i < SHADES; i++) {
@@ -454,7 +454,7 @@ void loop() {
       }
       break;
     case CMD_LIGHTON:                                  /* lightON command received */
-      Serial.print("Received lightON command");
+      Serial.print(F("Received lightON command"));
       lastDevID = ARiF.getLastDevID();
       for (int i = 0; i < LIGHTS; i++) {
         if (lights[i].getDevID() == lastDevID) {
@@ -463,7 +463,7 @@ void loop() {
       }
       break;
     case CMD_LIGHTOFF:                                 /* lightOFF command received */
-      Serial.print("Received lightOFF command");
+      Serial.print(F("Received lightOFF command"));
       lastDevID = ARiF.getLastDevID();
       for (int i = 0; i < LIGHTS; i++) {
         if (lights[i].getDevID() == lastDevID) {
@@ -471,8 +471,8 @@ void loop() {
         }
       }
       break;
-    case CMD_LIGHT_TYPE:
-      Serial.print("Received lightType command: ");
+    case CMD_LIGHT_TYPE:                               /* lightType command received */
+      Serial.print(F("Received lightType command: "));
       lastDevID = ARiF.getLastDevID();
       lastLightType = ARiF.getLastLightType();
       Serial.println(lastLightType);
@@ -484,24 +484,68 @@ void loop() {
       }
       WebGUI.lightSetType(lastDevID, ARiF.getLastLightType());
       break;
-    case CMD_LIGHT_TIMER:
-      Serial.print("Received lightTimer command: ");
+    case CMD_LIGHT_TIMER:                              /* lightTimer command received */
+      Serial.print(F("Received lightTimer command: "));
       lastDevID = ARiF.getLastDevID();
       lastLightTimer = ARiF.getLastLightTimer();
       Serial.println(lastLightTimer);
       for (int i = 0; i < LIGHTS; i++) {
-        if (lights[i].getDevID() == lastDevID) {         
+        if (lights[i].getDevID() == lastDevID) {
           lights[i].setTimer(lastLightTimer);
           Platform.EEPROMSetLightTimer(lastDevID, lastLightTimer);
         }
       }
       WebGUI.lightSetTimer(lastDevID, ARiF.getLastLightTimer());
       break;
-    case CMD_CTRL_ON:
+    case CMD_MODE_LIGHTS:                               /* modeLights command received */
+      Serial.println(F("Received modeLights command"));
+      setModeLights();
+      break;
+    case CMD_MODE_SHADES:                               /* modeShades command received */
+      Serial.println(F("Received modeShades command"));
+      setModeShades();
+      break;
+    case CMD_TIMER_POS:                                 /* shadePTimer command received */
+      Serial.print(F("Received shadePTimer command: "));
+      lastDevID = ARiF.getLastDevID();
+      lastShadePositionTimer = ARiF.getLastShadePositionTimer();
+      Platform.EEPROMSetShadePosTimer(lastDevID, lastShadePositionTimer);
+      Serial.println(lastShadePositionTimer);
+      /* validate if the received timer is within range, if not ignore */
+      if (lastShadePositionTimer >= SHADE_POSITION_TIMER_MIN && lastShadePositionTimer <= SHADE_POSITION_TIMER_MAX) {
+        for (int i = 0; i < SHADES; i++) {
+          if (shades[i].getDevID() == lastDevID) {
+            shades[i].setPositionTimer(lastShadePositionTimer);
+            Platform.EEPROMSetShadePosTimer(lastDevID, lastShadePositionTimer);
+          }
+        }
+      } else {
+        Serial.println(F("Received shadePTimer value out of range. Ignoring"));
+      }
+      break;
+    case CMD_TIMER_TILT:                                /* shadeTTimer command received */
+      Serial.print(F("Received shadeTTimer command: "));
+      lastDevID = ARiF.getLastDevID();
+      lastShadeTiltTimer = ARiF.getLastShadeTiltTimer();
+      Platform.EEPROMSetShadeTiltTimer(lastDevID, lastShadeTiltTimer);
+      Serial.println(lastShadeTiltTimer);
+      /* validate if the received timer is within range, if not ignore */
+      if (lastShadeTiltTimer >= SHADE_TILT_TIMER_MIN && lastShadeTiltTimer <= SHADE_TILT_TIMER_MAX) {
+        for (int i = 0; i < SHADES; i++) {
+          if (shades[i].getDevID() == lastDevID) {
+            shades[i].setTiltTimer(lastShadeTiltTimer);
+            Platform.EEPROMSetShadeTiltTimer(lastDevID, lastShadeTiltTimer);
+          }
+        }
+      } else {
+        Serial.println(F("Received shadeTTimer value out of range. Ignoring"));
+      }
+      break;
+    case CMD_CTRL_ON:                                   /* ctrlON command received */
       Light::enableCentralCtrl();
       Platform.EEPROMSetLightCentral(DIGITOUT_CENTRAL_CTRL_ENABLE);
       break;
-    case CMD_CTRL_OFF:
+    case CMD_CTRL_OFF:                                  /* ctrlOFF command received */
       Light::disableCentralCtrl();
       Platform.EEPROMSetLightCentral(DIGITOUT_CENTRAL_CTRL_DISABLE);
       break;
@@ -547,5 +591,38 @@ bool checkIotGwIP(IPAddress ip) {
     Platform.EEPROMSetRaspyIP(ip);
     Serial.println("IP changed. Writing to EEPROM");
     return false;
+  }
+}
+
+/* set mode into shades */
+void setModeShades() {
+  funcMode = MODE_SHADES;
+  WebGUI.setSystemMode(M_WEBGUI_SHADES);
+  Platform.EEPROMSetMode(MODE_SHADES);
+  ARiF.setMode(M_SHADES);
+  for (int i = 0; i < LIGHTS; i++) {
+    lights[i].reset();
+  }
+  for (int i = 0; i < SHADES; i++) {
+    shades[i].init(Settings::shadeIDs[i]);
+    WebGUI.shadeInit(i, Settings::shadeIDs[i]);
+  }
+}
+
+/* set mode into lights */
+void setModeLights() {
+  byte devID;
+  funcMode = MODE_LIGHTS;
+  WebGUI.setSystemMode(M_WEBGUI_LIGHTS);
+  Platform.EEPROMSetMode(MODE_LIGHTS);
+  ARiF.setMode(M_LIGHTS);
+  for (int i = 0; i < SHADES; i++) {
+    shades[i].reset();
+  }
+  for (int i = 0; i < LIGHTS; i++) {
+    devID = lights[i].getDevID();
+    lights[i].init(Platform.lightIDs[i], DIGITOUT_ONOFF);
+    WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_ONOFF);
+    Platform.EEPROMSetLightType(devID, DIGITOUT_ONOFF);
   }
 }

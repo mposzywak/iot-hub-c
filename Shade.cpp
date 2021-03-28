@@ -37,7 +37,7 @@ void Shade::init(byte shadeID) {
 
   position = 0;
   desiredPosition = 0;
-  movementRange = DEFAULT_RANGE * 10;
+  movementRange = SHADE_DEFAULT_POSITION_TIMER * 10;
   synced = false;
   justStoppedVar = false;
   justStoppedTiltVar = false;
@@ -53,9 +53,9 @@ void Shade::init(byte shadeID) {
   unsyncReported = false;
 
   /* filling in the section borders with the border miliseconds of the tilt movement range */
-  tiltRange = DEFAULT_TILT_RANGE;
-  tiltSections[0] = DEFAULT_TILT_RANGE;
-  tiltSections[1] = DEFAULT_TILT_RANGE / 2;
+  tiltRange = SHADE_DEFAULT_TILT_TIMER;
+  tiltSections[0] = SHADE_DEFAULT_TILT_TIMER;
+  tiltSections[1] = SHADE_DEFAULT_TILT_TIMER / 2;
   tiltSections[2] = 0;
 
   dir_swap = { 0, DIRECTION_SWITCH_WAIT_TIME, true }; /* The 300ms timer to wait before changing direction up/down */
@@ -560,4 +560,52 @@ void Shade::reset() {
   synced = false;
   justStoppedVar = false;
   justStoppedTiltVar = false;
+}
+
+void Shade::setPositionTimer(int timer) {
+  reset();
+
+  movementRange = timer * 10;
+  /* filling in the section borders with the border seconds of the movement range */
+  sections[0] = 0;
+  sections[4] = movementRange;
+  for (int i = 1; i < DEFAULT_PARTS; i++) {
+    sections[i] = movementRange / DEFAULT_PARTS * i;
+  }
+  
+  tiltMovement = false;
+  desiredTilt = TILT_H_CLOSED;
+  unsyncReported = false;
+  Serial.print("movementRange of devID: ");
+  Serial.print(shadeID);
+  Serial.print(" is: ");
+  Serial.println(movementRange);
+}
+
+void Shade::setTiltTimer(int timer) {
+  reset();
+  tiltRange = timer;
+  tiltSections[0] = timer;
+  tiltSections[1] = timer / 2;
+  tiltSections[2] = 0;
+
+  tiltMovement = false;
+  desiredTilt = TILT_H_CLOSED;
+  unsyncReported = false;
+}
+
+static byte Shade::validatePositionTimer(byte timer) {
+  if (timer >= SHADE_POSITION_TIMER_MIN && timer <= SHADE_POSITION_TIMER_MAX) {
+    return timer;
+  } else {
+    return SHADE_DEFAULT_POSITION_TIMER;
+  }
+}
+
+static int Shade::validateTiltTimer(int timer) {
+  if (timer >= SHADE_TILT_TIMER_MIN && timer <= SHADE_TILT_TIMER_MAX) {
+    return timer;
+  } else {
+    return SHADE_DEFAULT_TILT_TIMER;
+  }
 }

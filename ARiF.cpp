@@ -20,6 +20,8 @@ static ARiFClass::t ARiFClass::t_func1 = {0, 1000 * ARiF_BEACON_INT}; /* for ARi
 static ARiFClass::t ARiFClass::t_func2 = {0, 1000}; /* for everysecond on the DHCP checking */
 static byte ARiFClass::lastShadePosition = 0;
 static byte ARiFClass::lastShadeTilt = 0;
+static int ARiFClass::lastShadePositionTimer = 0;
+static int ARiFClass::lastShadeTiltTimer = 0;
 static byte ARiFClass::mode = 0;
 static byte ARiFClass::lastLightType = 0;
 static unsigned long ARiFClass::lastLightTimer = 0;
@@ -250,6 +252,34 @@ static byte ARiFClass::update() {
           return U_NOTHING;
         }
         break;
+      case CMD_MODE_LIGHTS:
+        client.println(F(HTTP_200_OK));
+        client.println();
+        client.stop();
+        return CMD_MODE_LIGHTS;
+        break;
+      case CMD_MODE_SHADES:
+        client.println(F(HTTP_200_OK));
+        client.println();
+        client.stop();
+        return CMD_MODE_SHADES;
+        break;
+      case CMD_TIMER_POS:
+        lastDevID = getValue(buff, DEVID);
+        lastShadePositionTimer = getValue(buff, VALUE);
+        client.println(F(HTTP_200_OK));
+        client.println();
+        client.stop();
+        return CMD_TIMER_POS;
+        break;
+      case CMD_TIMER_TILT:
+        lastDevID = getValue(buff, DEVID);
+        lastShadeTiltTimer = getValue(buff, VALUE);
+        client.println(F(HTTP_200_OK));
+        client.println();
+        client.stop();
+        return CMD_TIMER_TILT;
+        break;
       case CMD_UNKNOWN:
         client.println(F(HTTP_500_Error));
         client.stop();
@@ -317,6 +347,10 @@ static long ARiFClass::getValue(char *buff, int value) {
     if (strstr(buff, "cmd=shadeSTOP")) return CMD_SHADESTOP;
     if (strstr(buff, "cmd=ctrlON")) return CMD_CTRL_ON;
     if (strstr(buff, "cmd=ctrlOFF")) return CMD_CTRL_OFF;
+    if (strstr(buff, "cmd=modeLights")) return CMD_MODE_LIGHTS;
+    if (strstr(buff, "cmd=modeShades")) return CMD_MODE_SHADES;
+    if (strstr(buff, "cmd=shadePTimer")) return CMD_TIMER_POS;
+    if (strstr(buff, "cmd=shadeTTimer")) return CMD_TIMER_TILT;
     return CMD_UNKNOWN;
   }
 }
@@ -470,6 +504,14 @@ byte ARiFClass::getLastLightType() {
 
 unsigned long ARiFClass::getLastLightTimer() {
   return lastLightTimer;
+}
+
+int ARiFClass::getLastShadePositionTimer() {
+  return lastShadePositionTimer;
+}
+
+int ARiFClass::getLastShadeTiltTimer() {
+  return lastShadeTiltTimer;
 }
 
 void ARiFClass::deregister() {

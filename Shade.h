@@ -4,7 +4,10 @@
 #define SHADE_H_
 
 /* defines how many seconds does it take to move the entire shade from closed to open or vice-versa */
-#define DEFAULT_RANGE 64
+#define SHADE_DEFAULT_POSITION_TIMER 64
+
+/* default tilt range movement length in miliseconds */
+#define SHADE_DEFAULT_TILT_TIMER     1000
 
 /* defines the number sections that the range is devided to. This means that by changing the range section the shade will report its position */
 #define DEFAULT_PARTS 4
@@ -22,8 +25,11 @@
 #define DIRECTION_DOWN 0
 #define DIRECTION_UP   1
 
-/* default tilt range movement length in miliseconds */
-#define DEFAULT_TILT_RANGE 1000
+/* timer value ranges */
+#define SHADE_POSITION_TIMER_MIN  1
+#define SHADE_POSITION_TIMER_MAX  255
+#define SHADE_TILT_TIMER_MIN      100
+#define SHADE_TILT_TIMER_MAX      30000
 
 /* wait time between direction change (in ms) */
 #define DIRECTION_SWITCH_WAIT_TIME 300
@@ -227,6 +233,20 @@ class Shade {
 
   /* reset the light device - this function supposed to be executed only when the mode is changed from shades to something else */
   void Shade::reset();
+
+  /* set shade Position timer - setting the position timer will also reset the shade i. e. place it into the unsync state
+     timer value is in seconds */
+  void Shade::setPositionTimer(int timer);
+
+  /* set shade Tilt timer - setting the tilt timer will also reset the shade i. e. place it into the unsync state  
+     timer value is in miliseconds */
+  void Shade::setTiltTimer(int timer);
+
+  /* validation of Position Timer, if argument is not within range, returns default timer value */
+  static byte Shade::validatePositionTimer(byte timer);
+
+  /* validation of Tilt Timer, if argument is not within range, returns default timer value */
+  static int Shade::validateTiltTimer(int timer);
 };
 
 #endif
