@@ -5,16 +5,17 @@
 #ifndef ARIF_H_
 #define ARIF_H_
 
-#define ARiF_HTTP_PORT 32302
-#define ARiF_HTTP_BUFF 150
-#define ARiF_BEACON_INT 5
+#define ARiF_HTTP_PORT 32302                  /* port used as the listening port for ARiF connections and destination port for outgoing ones */
+#define ARiF_HTTP_BUFF 150                    /* maximum readable length of the incoming HTTP message */
+#define ARiF_BEACON_INT 5                     /* interval which the beacon is sent at (in seconds) */
 #define ARiF_BEACON_LENGTH 15
-#define ARiF_BEACON_PORT 5007
-#define ARiF_BEACON_STRING "/smarthouse/%d"
+#define ARiF_BEACON_PORT 5007                 /* Destination port where the beacon message is sent to */
+#define ARiF_BEACON_STRING "/smarthouse/%d"   /* String that we send in the beacon message */
 
 #define HTTP_200_OK "HTTP/1.1 200 OK\nContent-Type: text/html\nConnnection: close\n\n"
 #define HTTP_500_Error "HTTP/1.1 500\nContent-Type: text/html\nConnnection: close\n\n"
-
+#define HTTP_403_Error "HTTP/1.1 403\nContent-Type: text/html\nConnnection: close\n\n"
+#define HTTP_404_Error "HTTP/1.1 404\nContent-Type: text/html\nConnnection: close\n\n"
 
 /* Shades version 1 with the shade position and tilt */
 #define VER_SHD_1   0
@@ -23,16 +24,24 @@
 #define VER_LGHT_1  1
 
 /* ARiF messages different CMD codes & values returned by the update() in case CMD is captured */
-#define CMD_REGISTER  0
-#define CMD_HEARTBEAT 1
-#define CMD_LIGHTON   2
-#define CMD_LIGHTOFF  3
-#define CMD_SHADEPOS  4
-#define CMD_SHADETILT 5
-#define CMD_SHADEUP   6
-#define CMD_SHADEDOWN 7
-#define CMD_SHADESTOP 8
-#define CMD_UNKNOWN   10
+#define CMD_REGISTER     0
+#define CMD_HEARTBEAT    1
+#define CMD_LIGHTON      2
+#define CMD_LIGHTOFF     3
+#define CMD_SHADEPOS     4
+#define CMD_SHADETILT    5
+#define CMD_SHADEUP      6
+#define CMD_SHADEDOWN    7
+#define CMD_SHADESTOP    8
+#define CMD_LIGHT_TYPE   9
+#define CMD_LIGHT_TIMER  10
+#define CMD_CTRL_ON      11
+#define CMD_CTRL_OFF     12
+#define CMD_MODE_LIGHTS  13
+#define CMD_MODE_SHADES  14
+#define CMD_TIMER_POS    15
+#define CMD_TIMER_TILT   16
+#define CMD_UNKNOWN      200
 
 /* values returned by update() other than the CMDs above */
 #define U_NOTHING       50
@@ -48,6 +57,7 @@
 #define RASPYID 2
 #define CMD     3
 #define VALUE   4
+#define VALUE_L 5
 
 /* Shade status to control sendShadeStatus() CMD value */
 #define VAL_MOVE_UP     2
@@ -56,11 +66,19 @@
 #define VAL_UNSYNC      3
 #define VAL_SYNC        4
 
+/* Light status to control sendLightStatus() CMD value */
+#define VAL_OFF        0
+#define VAL_ON         1
+
 /* shade status dataType values */
 #define DT_DIRECTION 0
 #define DT_POSITION  1
 #define DT_TILT      2
 #define DT_SYNC      3
+
+/* define modes of operations */
+#define M_SHADES     0
+#define M_LIGHTS     1
 
 class ARiFClass {
   typedef struct t  {
@@ -122,11 +140,26 @@ class ARiFClass {
     /* variable holding shade tilt received by the last shadeTILT command */
     static byte lastShadeTilt;
 
+    /* variable holding light type received by the last lightType command */
+    static byte lastLightType;
+
+    /* variable holding light timer received by the last lightTimer command */
+    static unsigned long lastLightTimer;
+
+    /* variable holding last shade position timer */
+    static int lastShadePositionTimer;
+
+    /* variable holding last shade tilt timer */
+    static int lastShadeTiltTimer;
+
     /* holds information if this arduino is registered */
     static bool isRegistered;
 
     /* variable used to signal if the IP of the raspy has changed */
     static bool signalIPchange;
+
+    /* mode of operations */
+    static byte mode;
 
     //Tasks and their Schedules.
     static t t_func1;
@@ -145,7 +178,7 @@ class ARiFClass {
     static byte beginEthernet(byte mac[]);
 
     /* get single value from the ARiF URL */
-    static int getValue(char *buff, int value);
+    static long getValue(char *buff, int value);
 
     /* return true if the raspy IP address is same as the old one*/
     static bool checkIotGwIP(IPAddress ip);
@@ -216,12 +249,38 @@ class ARiFClass {
     /* get the tilt of the last received shadeTILT command */
     static byte getLastShadeTilt();
 
+    /* get the type of the last received lightType command */
+    static byte getLastLightType();
+
+    /* get the timer of the last received lightTimer command */
+    unsigned long getLastLightTimer();
+
+    /* get the shade Position Timer received through shadePTimer command */
+    int getLastShadePositionTimer();
+
+    /* get the shade Tilt Timer received through shadeTTimer command */
+    int getLastShadeTiltTimer();
+
     /* send the shade sync information */
     static void sendShadeSynced(byte devID);
 
     /* send information that the shade is not synced */
     static void sendShadeUnsynced(byte devID);
 
+    /* deregister this arduino */
+    static void deregister();
+
+    /* send the generic light status message */
+    static void ARiFClass::sendLightStatus(byte devID, byte value);
+
+    /* send the light ON status message */
+    static void ARiFClass::sendLightON(byte devID);
+
+    /* send the light OFF status message */
+    static void ARiFClass::sendLightOFF(byte devID);
+
+    /* set the arduino mode */
+    static void ARiFClass::setMode(byte m);
 };
 
 extern ARiFClass ARiF;

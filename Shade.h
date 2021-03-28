@@ -4,7 +4,10 @@
 #define SHADE_H_
 
 /* defines how many seconds does it take to move the entire shade from closed to open or vice-versa */
-#define DEFAULT_RANGE 64
+#define SHADE_DEFAULT_POSITION_TIMER 64
+
+/* default tilt range movement length in miliseconds */
+#define SHADE_DEFAULT_TILT_TIMER     1000
 
 /* defines the number sections that the range is devided to. This means that by changing the range section the shade will report its position */
 #define DEFAULT_PARTS 4
@@ -13,6 +16,7 @@
 #define TILT_F_CLOSED  0
 #define TILT_H_CLOSED  45
 #define TILT_F_OPEN    90
+#define TILT_NONE      255     /* only to be assigned to secDesiredTilt */
 
 #define TILT_FULL_MOVE 1100
 #define TILT_HALF_MOVE 550
@@ -21,13 +25,17 @@
 #define DIRECTION_DOWN 0
 #define DIRECTION_UP   1
 
-/* default tilt range movement length in miliseconds */
-#define DEFAULT_TILT_RANGE 1000
+/* timer value ranges */
+#define SHADE_POSITION_TIMER_MIN  1
+#define SHADE_POSITION_TIMER_MAX  255
+#define SHADE_TILT_TIMER_MIN      100
+#define SHADE_TILT_TIMER_MAX      30000
 
-/* types of physical button press */
-#define PHY_NO_PRESS                0
-#define PHY_MOMENTARY_PRESS         1
-#define PHY_PRESS_MORE_THAN_2SEC    2
+/* wait time between direction change (in ms) */
+#define DIRECTION_SWITCH_WAIT_TIME 300
+
+/* amount of time a button needs to be held in order to enable action on press-hold event */
+#define BUTTON_HOLD_TIME 1000
 
 /*
  * Class for handling of the Shades. Each object represents one shade composed of 4 pins (2 inputs for both directions and 2 outputs for both directions)
@@ -50,22 +58,25 @@ class Shade {
     byte inPinDown;
 
     /* variable holding the current position of the shade (in seconds) */
-    byte position;
+    int position;
 
     /* variable indicating the desired position. This is used to control the movement of the shade */
-    byte desiredPosition;
+    int desiredPosition;
 
     /* variable holding information if the shade is synced (i. e. if the system knows in which position it is in) */
     bool synced;
 
     /* the amount of time (in seconds) it takes for the shade to fully open from fully closed state (or vice-versa) */
-    byte movementRange;
+    int movementRange;
 
     /* this is the tilt value of the current shade. It is configurable. */
     byte tiltRange;
 
     /* variable indicating the desired tilt. This is used to control the shade tilt */
     byte desiredTilt;
+
+    /* variable used to hold the desired Tilt value that is received during tilt move (so that desiredTilt is not overwritten) */
+    byte secDesiredTilt;
 
     int tiltSections[3];
 
@@ -87,13 +98,16 @@ class Shade {
 
     byte oldSec;
 
-    byte sections[6];
+    int sections[6];
 
     /* contains the flag if the last checkpoint value has been already reported */
     bool positionReported;
 
     /* contains the value of the last checkpoint Position */
-    byte reachedPosition;
+    int reachedPosition;
+
+    /* the secondary position value. Used to store temporary desired position value before movement can be started */
+    int secPosition;
 
     /* contains the flag if the information about Shade being unsync has been already reported */
     bool unsyncReported;
@@ -113,8 +127,8 @@ class Shade {
     /* holds information if the current move is a tilt movement (so that other conditions can be disabled) */
     bool tiltMovement;
 
-    void upToPosition(byte dp);
-    void downToPosition(byte dp);
+    void upToPosition(int dp);
+    void downToPosition(int dp);
 
     /* holds time values for time gap on shade movement direction change */
     t dir_swap;
@@ -140,7 +154,8 @@ class Shade {
     void setTiltFromUp();
     void setTiltFromDown();
 
-    
+    /* indicator variable to hold info if during tilt movement a position change request has been received */
+    bool positionAfterTilt;
   public:
 
     static byte low;
@@ -216,7 +231,22 @@ class Shade {
   /* toggle tilt - move the tilt in down (make it more close). If fully closed - move to fully open */
   void Shade::toggleTiltDown();
 
-  
+  /* reset the light device - this function supposed to be executed only when the mode is changed from shades to something else */
+  void Shade::reset();
+
+  /* set shade Position timer - setting the position timer will also reset the shade i. e. place it into the unsync state
+     timer value is in seconds */
+  void Shade::setPositionTimer(int timer);
+
+  /* set shade Tilt timer - setting the tilt timer will also reset the shade i. e. place it into the unsync state  
+     timer value is in miliseconds */
+  void Shade::setTiltTimer(int timer);
+
+  /* validation of Position Timer, if argument is not within range, returns default timer value */
+  static byte Shade::validatePositionTimer(byte timer);
+
+  /* validation of Tilt Timer, if argument is not within range, returns default timer value */
+  static int Shade::validateTiltTimer(int timer);
 };
 
 #endif

@@ -20,6 +20,11 @@ static ARiFClass::t ARiFClass::t_func1 = {0, 1000 * ARiF_BEACON_INT}; /* for ARi
 static ARiFClass::t ARiFClass::t_func2 = {0, 1000}; /* for everysecond on the DHCP checking */
 static byte ARiFClass::lastShadePosition = 0;
 static byte ARiFClass::lastShadeTilt = 0;
+static int ARiFClass::lastShadePositionTimer = 0;
+static int ARiFClass::lastShadeTiltTimer = 0;
+static byte ARiFClass::mode = 0;
+static byte ARiFClass::lastLightType = 0;
+static unsigned long ARiFClass::lastLightTimer = 0;
 
 
 static byte ARiFClass::begin(byte version, byte mac[]) {
@@ -90,13 +95,19 @@ static byte ARiFClass::update() {
     }
 
     switch (getValue(buff, CMD)) {
-      case CMD_HEARTBEAT:      
-        client.println(F(HTTP_200_OK)); /* write 200 OK */
-        client.stop();                  /* send */
-        lastHeartbeat = 0;              /* reset the heartbeat timer */
-        if (isConnected == 0) {
-          isConnected = true;
-          return U_CONNECTED;
+      case CMD_HEARTBEAT:
+        if (isRegistered) {
+          client.println(F(HTTP_200_OK)); /* write 200 OK */
+          client.stop();                  /* send */
+          lastHeartbeat = 0;              /* reset the heartbeat timer */
+          if (isConnected == 0) {
+            isConnected = true;
+            return U_CONNECTED;
+          }
+        } else {
+          client.println(F(HTTP_403_Error)); /* write 403 because the unexpected HB */
+          client.stop();                  /* send */
+          Serial.println("Unexpected heartbeat received. Sending 403.");
         }
         break;
       case CMD_REGISTER:
@@ -113,54 +124,161 @@ static byte ARiFClass::update() {
         //}
         break;
       case CMD_SHADEUP:
-        lastDevID = getValue(buff, DEVID);
-        client.println(F(HTTP_200_OK));
-        client.println();
-        client.stop();
-        return CMD_SHADEUP;
+        if (mode == M_SHADES) {
+          lastDevID = getValue(buff, DEVID);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_SHADEUP;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
         break;
       case CMD_SHADEDOWN:
-        lastDevID = getValue(buff, DEVID);
-        client.println(F(HTTP_200_OK));
-        client.println();
-        client.stop();
-        return CMD_SHADEDOWN;
+        if (mode == M_SHADES) {
+          lastDevID = getValue(buff, DEVID);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_SHADEDOWN;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
         break;
       case CMD_LIGHTON:
-        lastDevID = getValue(buff, DEVID);
-        client.println(F(HTTP_200_OK));
-        client.println();
-        client.stop();
-        return CMD_LIGHTON;
+        if (mode == M_LIGHTS) {
+          lastDevID = getValue(buff, DEVID);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_LIGHTON;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
         break;
       case CMD_LIGHTOFF:
-        lastDevID = getValue(buff, DEVID);
-        client.println(F(HTTP_200_OK));
-        client.println();
-        client.stop();
-        return CMD_LIGHTOFF;
+        if (mode == M_LIGHTS) {
+          lastDevID = getValue(buff, DEVID);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_LIGHTOFF;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
+        break;
+      case CMD_LIGHT_TYPE:
+        if (mode == M_LIGHTS) {
+          lastDevID = getValue(buff, DEVID);
+          lastLightType = getValue(buff, VALUE);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_LIGHT_TYPE;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
+        break;
+      case CMD_LIGHT_TIMER:
+        if (mode == M_LIGHTS) {
+          lastDevID = getValue(buff, DEVID);
+          lastLightTimer = getValue(buff, VALUE_L);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_LIGHT_TIMER;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
         break;
       case CMD_SHADEPOS:
-        lastDevID = getValue(buff, DEVID);
-        lastShadePosition = getValue(buff, VALUE);
-        client.println(F(HTTP_200_OK));
-        client.println();
-        client.stop();
-        return CMD_SHADEPOS;
+        if (mode == M_SHADES) {
+          lastDevID = getValue(buff, DEVID);
+          lastShadePosition = getValue(buff, VALUE);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_SHADEPOS;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
         break;
       case CMD_SHADETILT:
-        lastDevID = getValue(buff, DEVID);
-        lastShadeTilt = getValue(buff, VALUE);
-        client.println(F(HTTP_200_OK));
-        client.println();
-        client.stop();
-        return CMD_SHADETILT;
+        if (mode == M_SHADES) {
+          lastDevID = getValue(buff, DEVID);
+          lastShadeTilt = getValue(buff, VALUE);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_SHADETILT;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
         break;
       case CMD_SHADESTOP:
+        if (mode == M_SHADES) {
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_SHADESTOP;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
+        break;
+      case CMD_MODE_LIGHTS:
         client.println(F(HTTP_200_OK));
         client.println();
         client.stop();
-        return CMD_SHADESTOP;
+        return CMD_MODE_LIGHTS;
+        break;
+      case CMD_MODE_SHADES:
+        client.println(F(HTTP_200_OK));
+        client.println();
+        client.stop();
+        return CMD_MODE_SHADES;
+        break;
+      case CMD_TIMER_POS:
+        lastDevID = getValue(buff, DEVID);
+        lastShadePositionTimer = getValue(buff, VALUE);
+        client.println(F(HTTP_200_OK));
+        client.println();
+        client.stop();
+        return CMD_TIMER_POS;
+        break;
+      case CMD_TIMER_TILT:
+        lastDevID = getValue(buff, DEVID);
+        lastShadeTiltTimer = getValue(buff, VALUE);
+        client.println(F(HTTP_200_OK));
+        client.println();
+        client.stop();
+        return CMD_TIMER_TILT;
         break;
       case CMD_UNKNOWN:
         client.println(F(HTTP_500_Error));
@@ -173,7 +291,7 @@ static byte ARiFClass::update() {
     signalIPchange = false;
     return U_RASPYIPCHGD;
   }
-  
+
   return U_NOTHING;
 }
 
@@ -193,7 +311,7 @@ static byte ARiFClass::beginEthernet(byte mac[]) {
   }
 }
 
-static int ARiFClass::getValue(char *buff, int value) {
+static long ARiFClass::getValue(char *buff, int value) {
   char *pos;
   if (value == DEVID) {
     pos = strstr(buff, "devID=");
@@ -211,7 +329,13 @@ static int ARiFClass::getValue(char *buff, int value) {
     pos = strstr(buff, "value=");
     return atoi(pos + 6);
   }
+  if (value == VALUE_L) {
+    pos = strstr(buff, "value=");
+    return atol(pos + 6);
+  }
   if (value == CMD ) {
+    if (strstr(buff, "cmd=lightType")) return CMD_LIGHT_TYPE;
+    if (strstr(buff, "cmd=lightTimer")) return CMD_LIGHT_TIMER;
     if (strstr(buff, "cmd=register")) return CMD_REGISTER;
     if (strstr(buff, "cmd=heartbeat")) return CMD_HEARTBEAT;
     if (strstr(buff, "cmd=lightON")) return CMD_LIGHTON;
@@ -221,6 +345,12 @@ static int ARiFClass::getValue(char *buff, int value) {
     if (strstr(buff, "cmd=shadeUP")) return CMD_SHADEUP;
     if (strstr(buff, "cmd=shadeDOWN")) return CMD_SHADEDOWN;
     if (strstr(buff, "cmd=shadeSTOP")) return CMD_SHADESTOP;
+    if (strstr(buff, "cmd=ctrlON")) return CMD_CTRL_ON;
+    if (strstr(buff, "cmd=ctrlOFF")) return CMD_CTRL_OFF;
+    if (strstr(buff, "cmd=modeLights")) return CMD_MODE_LIGHTS;
+    if (strstr(buff, "cmd=modeShades")) return CMD_MODE_SHADES;
+    if (strstr(buff, "cmd=shadePTimer")) return CMD_TIMER_POS;
+    if (strstr(buff, "cmd=shadeTTimer")) return CMD_TIMER_TILT;
     return CMD_UNKNOWN;
   }
 }
@@ -239,7 +369,7 @@ static void ARiFClass::sendShadeStatus(byte devID, byte dataType, byte value) {
   if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
     Serial.print("devID: ");
     Serial.print(devID);
-    Serial.print(" sending to "); // to be removed 
+    Serial.print(" sending to "); // to be removed
     Serial.print(ARiFClient.remoteIP()); // to be removed
     // Make a HTTP request:
     ARiFClient.print("POST /?devID=");
@@ -252,8 +382,8 @@ static void ARiFClass::sendShadeStatus(byte devID, byte dataType, byte value) {
       ARiFClient.print(raspyID);
     } else {
       if (raspyID >= 10 < 100) {
-      ARiFClient.print("0");
-      ARiFClient.print(raspyID);
+        ARiFClient.print("0");
+        ARiFClient.print(raspyID);
       } else {
         ARiFClient.print(raspyID);
       }
@@ -295,7 +425,7 @@ static void ARiFClass::sendShadeStatus(byte devID, byte dataType, byte value) {
         Serial.println(" true. ");
       }
     }
-    
+
     ARiFClient.println("Host: raspy");
     ARiFClient.println("Connection: close");
     ARiFClient.println();
@@ -346,14 +476,14 @@ static byte ARiFClass::getArdID() {
 
 bool ARiFClass::timeCheck(struct t *t ) {
   if ((unsigned long)(millis() - t->tStart) > t->tTimeout) {
-    return true;    
+    return true;
   } else {
     return false;
   }
 }
 
 void ARiFClass::timeRun(struct t *t) {
-    t->tStart = millis();
+  t->tStart = millis();
 }
 
 byte ARiFClass::getLastDevID() {
@@ -366,4 +496,80 @@ byte ARiFClass::getLastShadePosition() {
 
 byte ARiFClass::getLastShadeTilt() {
   return lastShadeTilt;
+}
+
+byte ARiFClass::getLastLightType() {
+  return lastLightType;
+}
+
+unsigned long ARiFClass::getLastLightTimer() {
+  return lastLightTimer;
+}
+
+int ARiFClass::getLastShadePositionTimer() {
+  return lastShadePositionTimer;
+}
+
+int ARiFClass::getLastShadeTiltTimer() {
+  return lastShadeTiltTimer;
+}
+
+void ARiFClass::deregister() {
+  isRegistered = false;
+  ardID = 0;
+}
+
+static void ARiFClass::sendLightStatus(byte devID, byte value) {
+  if (!isConnected) return;  // exit function if the link is dead;
+  if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
+    Serial.print("devID: ");
+    Serial.print(devID);
+    Serial.print(" sending to "); // to be removed
+    Serial.print(ARiFClient.remoteIP()); // to be removed
+    // Make a HTTP request:
+    ARiFClient.print("POST /?devID=");
+    ARiFClient.print(devID);
+    ARiFClient.print("&ardID=");
+    ARiFClient.print(ardID);
+    ARiFClient.print("&raspyID=");
+    if (raspyID < 10) {
+      ARiFClient.print("00");
+      ARiFClient.print(raspyID);
+    } else {
+      if (raspyID >= 10 < 100) {
+        ARiFClient.print("0");
+        ARiFClient.print(raspyID);
+      } else {
+        ARiFClient.print(raspyID);
+      }
+    }
+
+    ARiFClient.print(F("&cmd=status&devType=digitOUT&dataType=bool&value="));
+    if (value == VAL_OFF) {
+      ARiFClient.print("0\n");
+      Serial.println(" OFF. ");
+    } else if (value == VAL_ON) {
+      ARiFClient.print("1\n");
+      Serial.println(" ON. ");
+    }
+
+
+    ARiFClient.println("Host: raspy");
+    ARiFClient.println("Connection: close");
+    ARiFClient.println();
+  } else {
+    Serial.println("Problem with connecting");
+  }
+}
+
+static void ARiFClass::sendLightON(byte devID) {
+  sendLightStatus(devID, VAL_ON);
+}
+
+static void ARiFClass::sendLightOFF(byte devID) {
+  sendLightStatus(devID, VAL_OFF);
+}
+
+static void ARiFClass::setMode(byte m) {
+  mode = m;
 }
