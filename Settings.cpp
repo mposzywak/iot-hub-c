@@ -68,15 +68,15 @@
                                                  CONTROLLINO_D20 };
 
     /* The input pin devID array */
-    static byte Settings::digitINdevID[IN_PINS] = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30 };
+    //static byte Settings::digitINdevID[IN_PINS] = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30 };
 
     /* the output pin devID array */
-    static byte Settings::digitOUTdevID[OUT_PINS] = { 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70 };
+    //static byte Settings::digitOUTdevID[OUT_PINS] = { 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70 };
 
-    /* the shadeID array */
+    /* the shadeID array (numbers must be consecutive) */
     static byte Settings::shadeIDs[SHADES] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 
-    /* the lightID array */
+    /* the lightID array (numbers must be consecutive) */
     static byte Settings::lightIDs[LIGHTS] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 };
 
 #elif defined(CONTROLLINO_MAXI) 
@@ -108,15 +108,15 @@
                                                  CONTROLLINO_D11 };
                             
     /* The input pin devID array */
-    static byte Settings::digitINdevID[IN_PINS] = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 };
+    //static byte Settings::digitINdevID[IN_PINS] = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 };
 
     /* the output pin devID array */
-    static byte Settings::digitOUTdevID[OUT_PINS] = { 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61 };
+    //static byte Settings::digitOUTdevID[OUT_PINS] = { 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61 };
 
-    /* the shadeID array */
+    /* the shadeID array (numbers must be consecutive) */
     static byte Settings::shadeIDs[SHADES] = { 1, 2, 3, 4, 5, 6 };
 
-    /* the lightID array */
+    /* the lightID array (numbers must be consecutive) */
     static byte Settings::lightIDs[LIGHTS] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
     
 #elif defined(ARDUINO_AVR_MEGA2560)
@@ -180,15 +180,15 @@
                                                  65 };
                             
     /* The input pin devID array */
-    static byte Settings::digitINdevID[IN_PINS] = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 };
+    //static byte Settings::digitINdevID[IN_PINS] = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 };
 
     /* the output pin devID array */
-    static byte Settings::digitOUTdevID[OUT_PINS] = { 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61 };
+    //static byte Settings::digitOUTdevID[OUT_PINS] = { 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61 };
 
-    /* the shadeID array */
+    /* the shadeID array (numbers must be consecutive) */
     static byte Settings::shadeIDs[SHADES] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 };
 
-    /* the lightID array */
+    /* the lightID array (numbers must be consecutive) */
     static byte Settings::lightIDs[LIGHTS] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28 };
     
 #else 
@@ -346,6 +346,7 @@ static void Settings::EEPROMSetMode(byte mode) {
  */
 
 static void Settings::EEPROMSetLightConfig(byte devID, byte type, unsigned long timer) {
+  if (devID > LIGHTS) return;
   byte index = EEPROM_IDX_LIGHTS + (6 * (devID - 1)); /* start address for Light data structure */
   EEPROM.write(index + 1, type);
   EEPROMWritelong(index + 2, timer);
@@ -359,6 +360,7 @@ static byte Settings::EEPROMGetLightType(byte devID) {
 }
 
 static void Settings::EEPROMSetLightType(byte devID, byte type) {
+  if (devID > LIGHTS) return;
   byte index = EEPROM_IDX_LIGHTS + (6 * (devID - 1)); /* start address for Light data structure */
   EEPROM.write(index + 1, type);
 }
@@ -371,11 +373,13 @@ static unsigned long Settings::EEPROMGetLightTimer(byte devID) {
 }
 
 static void Settings::EEPROMSetLightTimer(byte devID, unsigned long timer) {
+  if (devID > LIGHTS) return;
   byte index = EEPROM_IDX_LIGHTS + (6 * (devID - 1)); /* start address for Light data structure */
   EEPROMWritelong(index + 2, timer);
 }
 
 static void Settings::EEPROMSetLightStatus(byte devID, byte status) {
+  if (devID > LIGHTS) return;
   byte index = EEPROM_IDX_LIGHTS + (6 * (devID - 1)); /* start address for Light data structure */
   EEPROM.write(index, status);
 }
@@ -404,6 +408,20 @@ static void Settings::EEPROMWritelong(int address, unsigned long value) {
   EEPROM.write(address + 3, one);
 }
 
+static int Settings::EEPROMReadInt(int address) {
+  byte byte1 = EEPROM.read(address);
+  byte byte2 = EEPROM.read(address + 1);
+  return (byte1 << 8) + byte2;
+}
+
+static void Settings::EEPROMWriteInt(int address, int value) {
+  byte byte1 = value >> 8;
+  byte byte2 = value & 0xFF;
+  EEPROM.write(address, byte1);
+  EEPROM.write(address + 1, byte2);
+}
+
+
 static void Settings::EEPROMSetLightCentral(byte mode) {
   EEPROM.write(EEPROM_IDX_CENT_CTRL, mode);
 }
@@ -412,6 +430,58 @@ static byte Settings::EEPROMGetLightCentral() {
   byte mode;
   mode = EEPROM.read(EEPROM_IDX_CENT_CTRL);
   return mode;
+}
+
+/* The shadeIDs and lightIDs are used as index values for the entries in the EEPROM hence they must all start from 1 and be consecutive in order for the 
+   EEPROM storage of individual configuration of devices to work properly */
+
+/* The following scheme shows how the data is stored (for a shade type device):
+ *  xx xxxx xx xx xx xxxx
+ *  |  |    |  |  |  |__________ The tile timer value (int)
+ *  |  |    |  |  |__________ The position timer value (byte)
+ *  |  |    |  |__________ The shade device type: (byte)
+ *  |  |    |_________ flags field (byte) 
+ *  |  |_______ The Tilt position of shade device: (int)
+ *  |____ The Position of the shade (current state): (byte)
+ */
+
+static void Settings::EEPROMSetShadeType(byte devID, byte type) {
+  if (devID > SHADES) return;
+  byte index = EEPROM_IDX_SHADES + (7 * (devID - 1));
+  EEPROM.write(index + 4, type);
+}
+
+static void Settings::EEPROMSetShadeTiltTimer(byte devID, int timer) {
+  if (devID > SHADES) return;
+  byte index = EEPROM_IDX_SHADES + (7 * (devID - 1));
+  EEPROMWriteInt(index + 6, timer);
+}
+
+static void Settings::EEPROMSetShadePosTimer(byte devID, byte timer) {
+  if (devID > SHADES) return;
+  byte index = EEPROM_IDX_SHADES + (7 * (devID - 1));
+  EEPROM.write(index + 5, timer);
+}
+
+static byte Settings::EEPROMGetShadeType(byte devID) {
+  byte index = EEPROM_IDX_SHADES + (7 * (devID - 1));
+  byte type;
+  type = EEPROM.read(index + 4);
+  return type;
+}
+
+static int Settings::EEPROMGetShadeTiltTimer(byte devID) {
+  byte index = EEPROM_IDX_SHADES + (7 * (devID - 1));
+  int timer;
+  timer = EEPROMReadInt(index + 6);
+  return timer;
+}
+
+static byte Settings::EEPROMGetShadePosTimer(byte devID) {
+  byte index = EEPROM_IDX_SHADES + (7 * (devID - 1));
+  byte timer;
+  timer = EEPROM.read(index + 5);
+  return timer;
 }
 
 static byte Settings::SDCardInit() {

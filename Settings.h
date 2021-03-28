@@ -41,7 +41,12 @@
 #define EEPROM_IDX_RASPYIP  3  // length 6
 #define EEPROM_IDX_MODE     9  // length 1
 #define EEPROM_IDX_LIGHTS   10 // length 210 -> 30 (lights) x 6 (1 status + 1 type + 4 timer)  + 30 (buffer for future use)
-#define EEPROM_IDX_CENT_CTRL 220 // length 
+#define EEPROM_IDX_CENT_CTRL 220 // length
+#define EEPROM_IDX_SHADES   221 // length 150 -> 15 (shades) x 8 (4 status + 1 type + 1 pos timer + 2 tilt timer) + 30 (buffer for future use)
+
+/* flags */
+#define EEPROM_FLG_SHADE_SYNC     1
+#define EEPROM_FLG_SHADE_INMOTION 2
 
 /* functional modes of the entire device */
 #define MODE_LIGHTS 0
@@ -72,6 +77,12 @@ class Settings {
 
     /* write a long vlaue into EEPROM at a given address */
     static void EEPROMWritelong(int address, unsigned long value);
+
+    /* read an int value from EEPROM's given address */
+    static int Settings::EEPROMReadInt(int address);
+
+    /* write an int vlaue into EEPROM at a given address */
+    static void Settings::EEPROMWriteInt(int address, int value);
 
   public:
 
@@ -177,6 +188,24 @@ class Settings {
 
     /* Read Central Control mode from the EEPROM */
     static byte EEPROMGetLightCentral();
+
+    /* Write Shade type into memory */
+    static void EEPROMSetShadeType(byte devID, byte type);
+
+    /* Write Shade tilt timer into memory */
+    static void EEPROMSetShadeTiltTimer(byte devID, int timer);
+
+    /* Write Shade position timer into memory */
+    static void EEPROMSetShadePosTimer(byte devID, byte timer);
+
+    /* Read Shade type from memory */
+    static byte EEPROMGetShadeType(byte devID);
+
+    /* Read Shade tilt timer from memory */
+    static int EEPROMGetShadeTiltTimer(byte devID);
+
+    /* Read Shade position timer from memory */
+    static byte EEPROMGetShadePosTimer(byte devID);
 
     /*
      * SD Card related functions

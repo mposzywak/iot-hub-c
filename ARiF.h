@@ -15,6 +15,7 @@
 #define HTTP_200_OK "HTTP/1.1 200 OK\nContent-Type: text/html\nConnnection: close\n\n"
 #define HTTP_500_Error "HTTP/1.1 500\nContent-Type: text/html\nConnnection: close\n\n"
 #define HTTP_403_Error "HTTP/1.1 403\nContent-Type: text/html\nConnnection: close\n\n"
+#define HTTP_404_Error "HTTP/1.1 404\nContent-Type: text/html\nConnnection: close\n\n"
 
 /* Shades version 1 with the shade position and tilt */
 #define VER_SHD_1   0
@@ -36,6 +37,10 @@
 #define CMD_LIGHT_TIMER  10
 #define CMD_CTRL_ON      11
 #define CMD_CTRL_OFF     12
+#define CMD_MODE_LIGHTS  13
+#define CMD_MODE_SHADES  14
+#define CMD_TIMER_POS    15
+#define CMD_TIMER_TILT   16
 #define CMD_UNKNOWN      200
 
 /* values returned by update() other than the CMDs above */
@@ -141,6 +146,12 @@ class ARiFClass {
     /* variable holding light timer received by the last lightTimer command */
     static unsigned long lastLightTimer;
 
+    /* variable holding last shade position timer */
+    static int lastShadePositionTimer;
+
+    /* variable holding last shade tilt timer */
+    static int lastShadeTiltTimer;
+
     /* holds information if this arduino is registered */
     static bool isRegistered;
 
@@ -243,6 +254,12 @@ class ARiFClass {
 
     /* get the timer of the last received lightTimer command */
     unsigned long getLastLightTimer();
+
+    /* get the shade Position Timer received through shadePTimer command */
+    int getLastShadePositionTimer();
+
+    /* get the shade Tilt Timer received through shadeTTimer command */
+    int getLastShadeTiltTimer();
 
     /* send the shade sync information */
     static void sendShadeSynced(byte devID);
