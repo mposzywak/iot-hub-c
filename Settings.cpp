@@ -292,9 +292,10 @@ static bool Settings::EEPROMIsRegistered() {
    return (bool) EEPROM.read(EEPROM_IDX_REG);
 }
 
-static IPAddress Settings::EEPROMGetRaspyIP(IPAddress addr) {
-  EEPROM.get(EEPROM_IDX_RASPYIP, addr);
-  return addr;
+static IPAddress Settings::EEPROMGetRaspyIP() {
+  byte address[4];
+  EEPROM.get(EEPROM_IDX_RASPYIP, address);
+  return address;
 }
 
 static byte Settings::EEPROMGetRaspyID() {
@@ -310,14 +311,25 @@ static void Settings::EEPROMDeregister() {
 }
 
 static void Settings::EEPROMSetRaspyIP(IPAddress addr) {
+  Serial.print("Writing IP address: ");
+  Serial.println(addr);
   EEPROM.put(EEPROM_IDX_RASPYIP, addr);
 }
 
 static void Settings::EEPROMRegister(byte ardID, byte raspyID, IPAddress addr) {
+  Serial.print("Writing IP address: ");
+  Serial.println(addr[0]);
+  Serial.println(addr[1]);
+  Serial.println(addr[2]);
+  Serial.println(addr[3]);
   EEPROM.write(EEPROM_IDX_REG, (byte) true);
   EEPROM.write(EEPROM_IDX_ARDID, ardID);
   EEPROM.write(EEPROM_IDX_RASPYID, raspyID);
-  EEPROM.put(EEPROM_IDX_RASPYIP, addr);
+  //EEPROM.put(EEPROM_IDX_RASPYIP, addr);
+  EEPROM.write(EEPROM_IDX_RASPYIP, addr[0]);
+  EEPROM.write(EEPROM_IDX_RASPYIP + 1, addr[1]);
+  EEPROM.write(EEPROM_IDX_RASPYIP + 2, addr[2]);
+  EEPROM.write(EEPROM_IDX_RASPYIP + 3, addr[3]);
 }
 
 static byte Settings::EEPROMGetMode() {

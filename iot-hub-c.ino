@@ -169,7 +169,7 @@ void setup() {
     ardID = Platform.EEPROMGetArdID();
     Serial.println(ardID);
     Serial.print("Raspy IP: ");
-    iotGwIP = Platform.EEPROMGetRaspyIP(iotGwIP);
+    iotGwIP = Platform.EEPROMGetRaspyIP();
     Serial.println(iotGwIP);
     Serial.print("RaspyID: ");
     raspyID = Platform.EEPROMGetRaspyID();
