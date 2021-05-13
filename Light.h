@@ -21,6 +21,10 @@
 /* central control light delay */
 #define DIGITOUT_CENTRAL_CTRL_DELAY 200
 
+/* types of switches */
+#define DIGITOUT_SWITCH_PRESS_HOLD     0  /* the value indicates that the switch is of type press-and-hold, so the value of the output must change immediately upon pressure */
+#define DIGITOUT_SWITCH_PRESS_RELEASE  1  /* here the value indicates the switch is of type press-and-release, so the value of the output must change upon release of the switch (DEFAULT) */
+
 class Light {
   /* types definitions */
   typedef struct t  {
@@ -56,6 +60,9 @@ class Light {
     /* holds timer for button pressing - for measurement for how long the physical button is held pressed */
     t buttonHold;
 
+    /* time needed to measure minimum time the button must be held to change it's state. Only for DIGITOUT_SWITCH_PRESS_HOLD */
+    t buttonPressHold;
+    
     /* functions to control time based execution */
     bool Light::timeCheck(struct t *t );
     void Light::timeRun(struct t *t);
@@ -64,6 +71,9 @@ class Light {
     bool justToggled;
 
     static byte centralControlEnabled;
+
+    /* variable holding information if the switch is of type press-release or press-hold */
+    byte inputType;
 
   public:
 
@@ -84,6 +94,15 @@ class Light {
 
     /* sets the timer */
     void Light::setTimer(unsigned long timer);
+
+    /* set the pin input type to press and hold - change of state on the moment of press */
+    void Light::setInputTypeHold();
+
+    /* set the pin input type to press and release - change of state on the moment of release */
+    void Light::setInputTypeRelease();
+
+    /* get the type of input pins mechanics */
+    byte Light::getInputType();
     
     /* get devID value */
     byte Light::getDevID();

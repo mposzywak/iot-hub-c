@@ -173,7 +173,6 @@ byte Shade::update() {
         synced = true;
         this->stop();
         tiltStop(); /* this is just to report the state of the tilt if up move is used to sync the shade */
-        //Serial.println("Shade synced");
       }
       if (movingDown && position < movementRange) {
         position++;
@@ -182,7 +181,6 @@ byte Shade::update() {
         synced = true;
         this->stop();
         setTiltFromDown(); /* this is to report the state of the shade once synced */
-        //Serial.println("Shade synced");
       }
     } else { /* synced */
       if (tiltMovement == false) {
@@ -427,12 +425,13 @@ byte Shade::getDevID() {
 }
 
 bool Shade::isSynced() {
-  if (!unsyncReported) {
+  /*if (!unsyncReported) {
     unsyncReported = true;
     return synced;
   } else {
     return true;
-  }
+  }*/
+  return synced;
 }
 
 bool Shade::timeCheck(struct t *t ) {

@@ -34,8 +34,10 @@ void Light::init(byte lightID, byte type) {
 
   timer = DIGITOUT_DEFAULT_TIMER;
   onTimer = { 0, timer * 1000, true };
-  
+
   justToggled = false;
+  inputType = DIGITOUT_SWITCH_PRESS_RELEASE;
+  buttonPressHold = { 0, 100, true };
 }
 
 void Light::setType(byte type) {
@@ -63,40 +65,59 @@ byte Light::isPressed() {
     Serial.println("Turning off light after timer expired.");
     setOFF();
   }
-  
-  inPinState = Settings::getInputPinValue(inPin);
-  if (inPinState == HIGH) { /* Button pressed and held */
-    if (!inPinPressed) { /* at the moment of pressing start counting time */
-      timeRun(&buttonHold);
-    }
-    inPinPressed = true;
-    delay(10); // this delay here was placed in order for the press button result to be predictable
-    return PHY_NO_PRESS;
-  } else {
-    if (inPinPressed) { /* Button is released */
-      /* EXECUTED ON BUTTON RELEASE - START */
-
-      /* EXECUTED ON BUTTON RELEASE - END */
-      if (timeCheck(&buttonHold)) {
-        if (this->lightID == Platform.getLastLightDevID() && getCentralCtrl() == DIGITOUT_CENTRAL_CTRL_ENABLE) {
-          Serial.println("Central ON pressed and hel");
-          inPinPressed = false;
-          return PHY_CENTRAL_CTRL_PRESS_MORE_THAN_2SEC;
-        }
-        Serial.println("Held up above 2 sec");
-        inPinPressed = false;
-        return PHY_PRESS_MORE_THAN_2SEC;
+  if (inputType == DIGITOUT_SWITCH_PRESS_RELEASE) {
+    inPinState = Settings::getInputPinValue(inPin);
+    if (inPinState == HIGH) { /* Button pressed and held */
+      if (!inPinPressed) { /* at the moment of pressing start counting time */
+        timeRun(&buttonHold);
       }
-      if (this->lightID == Platform.getLastLightDevID() && getCentralCtrl() == DIGITOUT_CENTRAL_CTRL_ENABLE) {
-        Serial.println("Central ON mementary pressed");
-        inPinPressed = false;
-        return PHY_CENTRAL_CTRL_MOMENTARY_PRESS;
-      }
-      inPinPressed = false;
-      return PHY_MOMENTARY_PRESS;
+      inPinPressed = true;
+      delay(10); // this delay here was placed in order for the press button result to be predictable
+      return PHY_NO_PRESS;
     } else {
+      if (inPinPressed) { /* Button is released */
+        /* EXECUTED ON BUTTON RELEASE - START */
+
+        /* EXECUTED ON BUTTON RELEASE - END */
+        if (timeCheck(&buttonHold)) {
+          if (this->lightID == Platform.getLastLightDevID() && getCentralCtrl() == DIGITOUT_CENTRAL_CTRL_ENABLE) {
+            Serial.println("Central ON pressed and hel");
+            inPinPressed = false;
+            return PHY_CENTRAL_CTRL_PRESS_MORE_THAN_2SEC;
+          }
+          Serial.println("Held up above 2 sec");
+          inPinPressed = false;
+          return PHY_PRESS_MORE_THAN_2SEC;
+        }
+        if (this->lightID == Platform.getLastLightDevID() && getCentralCtrl() == DIGITOUT_CENTRAL_CTRL_ENABLE) {
+          Serial.println("Central ON mementary pressed");
+          inPinPressed = false;
+          return PHY_CENTRAL_CTRL_MOMENTARY_PRESS;
+        }
+        inPinPressed = false;
+        return PHY_MOMENTARY_PRESS;
+      } else {
+        return PHY_NO_PRESS;
+      }
+    }
+  } else { /* inputType == DIGITOUT_SWITCH_PRESS_HOLD */
+    delay(10); // this delay here was placed in order for the press button result to be predictable
+    if (inPinState != Settings::getInputPinValue(inPin) && inPinPressed == false) { /* indication that state of the input changed */
+      inPinState = Settings::getInputPinValue(inPin);
+      inPinPressed = true;
+      
+      Serial.println("Press button -----");
+      timeRun(&buttonPressHold);
+      delay(10); // this delay here was placed in order for the press button result to be predictable
       return PHY_NO_PRESS;
     }
+    if (timeCheck(&buttonPressHold)) {
+      Serial.println("Toggle output");
+      inPinPressed = false;
+      delay(10); // this delay here was placed in order for the press button result to be predictable
+      return PHY_MOMENTARY_PRESS;
+    }
+    
   }
 }
 
@@ -105,7 +126,7 @@ void Light::setON() {
   outPinState = Light::high;
   justToggled = true;
   if (type == DIGITOUT_TIMER) {
-      timeRun(&onTimer);
+    timeRun(&onTimer);
   }
 }
 
@@ -185,4 +206,16 @@ static void Light::disableCentralCtrl() {
 
 static byte Light::getCentralCtrl() {
   return centralControlEnabled;
+}
+
+void Light::setInputTypeHold() {
+  inputType = DIGITOUT_SWITCH_PRESS_HOLD;
+}
+
+void Light::setInputTypeRelease() {
+  inputType = DIGITOUT_SWITCH_PRESS_RELEASE;
+}
+
+byte Light::getInputType() {
+  return inputType;
 }

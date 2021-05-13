@@ -292,7 +292,7 @@ static bool Settings::EEPROMIsRegistered() {
    return (bool) EEPROM.read(EEPROM_IDX_REG);
 }
 
-static IPAddress Settings::EEPROMGetRaspyIP() {
+static IPAddress Settings::EEPROMGetRaspyIP( ) {
   byte address[4];
   EEPROM.get(EEPROM_IDX_RASPYIP, address);
   return address;
