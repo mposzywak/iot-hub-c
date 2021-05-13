@@ -44,6 +44,15 @@ Where:
   - `<value>` indicates the type of the light device. The argument can take the following values:
     - `0` - the regular on/off light device
     - `1` - a timer based light device
+* **light input type**
+Command used to set the type of the light's input type. This setting is used to tell Arduino how the physical light switch will behave. It can either return to its normal position after pressing (push button) or it can stay in the position which he was switched to (toggle switch)
+Direction: in
+URL: `/?devID=<devid>&ardID=<ardid>&raspyID=<raspyid>&cmd=inputHold`
+URL: `/?devID=<devid>&ardID=<ardid>&raspyID=<raspyid>&cmd=inputRelease`
+Where:
+  - `<cmd>` indicates the type of the light's input. The following two commands are used:
+    - `inputHold` - the toggle switch
+    - `inputRelease` - the push button
 
 **Shade Device**
 ----
