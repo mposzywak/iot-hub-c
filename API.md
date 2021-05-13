@@ -45,10 +45,9 @@ Where:
     - `0` - the regular on/off light device
     - `1` - a timer based light device
 * **light input type**
-Command used to set the type of the light's input type. This setting is used to tell Arduino how the physical light switch will behave. It can either return to its normal position after pressing (push button) or it can stay in the position which he was switched to (toggle switch)
+Command used to set the type of the light's input type. This setting is used to tell Arduino how the physical light switch will behave. It can either return to its normal position after pressing (push button) or it can stay in the position which he was switched to (toggle switch).
 Direction: in
-URL: `/?devID=<devid>&ardID=<ardid>&raspyID=<raspyid>&cmd=inputHold`
-URL: `/?devID=<devid>&ardID=<ardid>&raspyID=<raspyid>&cmd=inputRelease`
+URL: `/?devID=<devid>&ardID=<ardid>&raspyID=<raspyid>&cmd=<cmd>`
 Where:
   - `<cmd>` indicates the type of the light's input. The following two commands are used:
     - `inputHold` - the toggle switch
