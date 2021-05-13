@@ -280,6 +280,20 @@ static byte ARiFClass::update() {
         client.stop();
         return CMD_TIMER_TILT;
         break;
+      case CMD_INPUT_HOLD:
+        lastDevID = getValue(buff, DEVID);
+        client.println(F(HTTP_200_OK));
+        client.println();
+        client.stop();
+        return CMD_INPUT_HOLD;
+        break;
+      case CMD_INPUT_REL:
+        lastDevID = getValue(buff, DEVID);
+        client.println(F(HTTP_200_OK));
+        client.println();
+        client.stop();
+        return CMD_INPUT_REL;
+        break;
       case CMD_UNKNOWN:
         client.println(F(HTTP_500_Error));
         client.stop();
@@ -351,6 +365,8 @@ static long ARiFClass::getValue(char *buff, int value) {
     if (strstr(buff, "cmd=modeShades")) return CMD_MODE_SHADES;
     if (strstr(buff, "cmd=shadePTimer")) return CMD_TIMER_POS;
     if (strstr(buff, "cmd=shadeTTimer")) return CMD_TIMER_TILT;
+    if (strstr(buff, "cmd=inputHold")) return CMD_INPUT_HOLD;
+    if (strstr(buff, "cmd=inputRelease")) return CMD_INPUT_REL;
     return CMD_UNKNOWN;
   }
 }
@@ -414,15 +430,11 @@ static void ARiFClass::sendShadeStatus(byte devID, byte dataType, byte value) {
       ARiFClient.print(value);
       ARiFClient.print("\n");
     } else if (dataType == DT_SYNC) {
-      Serial.print(" sync: ");
-      Serial.println(value);
       ARiFClient.print(F("&cmd=status&devType=shade&dataType=sync&value="));
       if (value == VAL_UNSYNC) {
         ARiFClient.print("0\n");
-        Serial.println(" false. ");
       } else if (value == VAL_SYNC) {
         ARiFClient.print("1\n");
-        Serial.println(" true. ");
       }
     }
 

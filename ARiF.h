@@ -41,6 +41,8 @@
 #define CMD_MODE_SHADES  14
 #define CMD_TIMER_POS    15
 #define CMD_TIMER_TILT   16
+#define CMD_INPUT_HOLD   17
+#define CMD_INPUT_REL    18
 #define CMD_UNKNOWN      200
 
 /* values returned by update() other than the CMDs above */

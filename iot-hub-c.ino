@@ -45,7 +45,7 @@ bool relaysNC = true;
 byte funcMode;
 
 /* MAC address used for initiall boot */
-byte mac[] = { 0x00, 0xAA, 0xBB, 0xC6, 0xDD, 0x52 };
+byte mac[] = { 0x00, 0xAA, 0xBB, 0xC9, 0xDA, 0x53 };
 
 /*
    ------------------------
@@ -162,14 +162,14 @@ void setup() {
 
   /* get the registration data from EEPROM */
   isRegistered = Platform.EEPROMIsRegistered();
-  //isRegistered = false;
+  isRegistered = false;
 
   if (isRegistered) {
     Serial.print("Arduino registered with ardID: ");
     ardID = Platform.EEPROMGetArdID();
     Serial.println(ardID);
     Serial.print("Raspy IP: ");
-    iotGwIP = Platform.EEPROMGetRaspyIP(iotGwIP);
+    iotGwIP = Platform.EEPROMGetRaspyIP();
     Serial.println(iotGwIP);
     Serial.print("RaspyID: ");
     raspyID = Platform.EEPROMGetRaspyID();
@@ -539,6 +539,24 @@ void loop() {
         }
       } else {
         Serial.println(F("Received shadeTTimer value out of range. Ignoring"));
+      }
+      break;
+    case CMD_INPUT_HOLD:
+      Serial.println(F("Received inputHold command. "));
+      lastDevID = ARiF.getLastDevID();
+      for (int i = 0; i < LIGHTS; i++) {
+        if (lights[i].getDevID() == lastDevID) {
+          lights[i].setInputTypeHold();
+        }
+      }
+      break;
+    case CMD_INPUT_REL:
+      Serial.println(F("Received inputRelease command. "));
+      lastDevID = ARiF.getLastDevID();
+      for (int i = 0; i < LIGHTS; i++) {
+        if (lights[i].getDevID() == lastDevID) {
+          lights[i].setInputTypeRelease();
+        }
       }
       break;
     case CMD_CTRL_ON:                                   /* ctrlON command received */
