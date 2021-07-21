@@ -74,10 +74,10 @@ byte Light::isPressed() {
       inPinPressed = true;
       delay(10); // this delay here was placed in order for the press button result to be predictable
       return PHY_NO_PRESS;
-    } else {
+    } else { /* inPinState == LOW */
       if (inPinPressed) { /* Button is released */
         /* EXECUTED ON BUTTON RELEASE - START */
-
+        
         /* EXECUTED ON BUTTON RELEASE - END */
         if (timeCheck(&buttonHold)) {
           if (this->lightID == Platform.getLastLightDevID() && getCentralCtrl() == DIGITOUT_CENTRAL_CTRL_ENABLE) {
@@ -95,6 +95,7 @@ byte Light::isPressed() {
           return PHY_CENTRAL_CTRL_MOMENTARY_PRESS;
         }
         inPinPressed = false;
+        delay(10);
         return PHY_MOMENTARY_PRESS;
       } else {
         return PHY_NO_PRESS;
@@ -105,20 +106,19 @@ byte Light::isPressed() {
     if (inPinState != Settings::getInputPinValue(inPin) && inPinPressed == false) { /* indication that state of the input changed */
       inPinState = Settings::getInputPinValue(inPin);
       inPinPressed = true;
-      
-      Serial.println("Press button -----");
       timeRun(&buttonPressHold);
       delay(10); // this delay here was placed in order for the press button result to be predictable
       return PHY_NO_PRESS;
     }
     if (timeCheck(&buttonPressHold)) {
-      Serial.println("Toggle output");
       inPinPressed = false;
       delay(10); // this delay here was placed in order for the press button result to be predictable
+      Serial.println(lightID);
       return PHY_MOMENTARY_PRESS;
     }
-    
+    return PHY_NO_PRESS; /* function must always return a value even if situation "shouldn't" happen. Otherwise the return value is unpredictable */
   }
+  return PHY_NO_PRESS;
 }
 
 void Light::setON() {
