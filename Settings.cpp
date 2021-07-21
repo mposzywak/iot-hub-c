@@ -359,13 +359,13 @@ static void Settings::EEPROMSetMode(byte mode) {
 
 static void Settings::EEPROMSetLightConfig(byte devID, byte type, unsigned long timer) {
   if (devID > LIGHTS) return;
-  byte index = EEPROM_IDX_LIGHTS + (6 * (devID - 1)); /* start address for Light data structure */
+  byte index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1)); /* start address for Light data structure */
   EEPROM.write(index + 1, type);
   EEPROMWritelong(index + 2, timer);
 }
 
 static byte Settings::EEPROMGetLightType(byte devID) {
-  byte index = EEPROM_IDX_LIGHTS + (6 * (devID - 1)); /* start address for Light data structure */
+  byte index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1)); /* start address for Light data structure */
   byte type;
   type = EEPROM.read(index + 1);
   return type;
@@ -373,12 +373,12 @@ static byte Settings::EEPROMGetLightType(byte devID) {
 
 static void Settings::EEPROMSetLightType(byte devID, byte type) {
   if (devID > LIGHTS) return;
-  byte index = EEPROM_IDX_LIGHTS + (6 * (devID - 1)); /* start address for Light data structure */
+  byte index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1)); /* start address for Light data structure */
   EEPROM.write(index + 1, type);
 }
 
 static unsigned long Settings::EEPROMGetLightTimer(byte devID) {
-  byte index = EEPROM_IDX_LIGHTS + (6 * (devID - 1)); /* start address for Light data structure */
+  byte index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1)); /* start address for Light data structure */
   unsigned long timer;
   timer = EEPROMReadlong(index + 2);
   return timer;
@@ -386,15 +386,30 @@ static unsigned long Settings::EEPROMGetLightTimer(byte devID) {
 
 static void Settings::EEPROMSetLightTimer(byte devID, unsigned long timer) {
   if (devID > LIGHTS) return;
-  byte index = EEPROM_IDX_LIGHTS + (6 * (devID - 1)); /* start address for Light data structure */
+  byte index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1)); /* start address for Light data structure */
   EEPROMWritelong(index + 2, timer);
 }
 
 static void Settings::EEPROMSetLightStatus(byte devID, byte status) {
   if (devID > LIGHTS) return;
-  byte index = EEPROM_IDX_LIGHTS + (6 * (devID - 1)); /* start address for Light data structure */
+  byte index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1)); /* start address for Light data structure */
   EEPROM.write(index, status);
 }
+
+static byte Settings::EEPROMGetLightInputType(byte devID) {
+  if (devID > LIGHTS) return;
+  byte index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1));
+  byte inputType;
+  inputType = EEPROM.read(index + 6);
+  return inputType;
+}
+
+static void Settings::EEPROMSetLightInputType(byte devID, byte inputType) {
+  if (devID > LIGHTS) return;
+  byte index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1));
+  EEPROM.write(index + 6, inputType);
+}
+
 
 static unsigned long Settings::EEPROMReadlong(unsigned long address) {
   unsigned long value;
@@ -508,22 +523,21 @@ static byte Settings::SDCardInit() {
 
   if (!SD.begin(SD_ARD_MEGA_CS))
   {
-    Serial.println("Comm issue.");
-    Serial.println("FAIL");
+    Serial.println(F("Comm issue with SD Card ctrl. No SD Card available."));
     digitalWrite(SD_ARD_MEGA_CS, HIGH);
     return SD_INIT_NOHW;
   }
   if (!SD.exists("MAIN.CSS")) {
-    Serial.println("ERROR - Can't find MAIN.CSS file!");
+    Serial.println(F("ERROR - Can't find MAIN.CSS file!"));
     digitalWrite(SD_ARD_MEGA_CS, HIGH);
     return SD_INIT_NOFILE;
   } else {
     if (!SD.exists("MAIN.JS")) {
-      Serial.println("ERROR - Can't find MAIN.JS file!");
+      Serial.println(F("ERROR - Can't find MAIN.JS file!"));
       digitalWrite(SD_ARD_MEGA_CS, HIGH);
       return SD_INIT_NOFILE;
     } else {
-      Serial.println("SUCCESS - All files present!");
+      Serial.println(F("SUCCESS - All files present!"));
       digitalWrite(SD_ARD_MEGA_CS, HIGH);
       return SD_INIT_SUCCESS;
     }

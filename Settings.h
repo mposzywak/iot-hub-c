@@ -28,11 +28,11 @@
 #endif
 
 /* types of physical button press */
-#define PHY_NO_PRESS                          0
-#define PHY_MOMENTARY_PRESS                   1
-#define PHY_PRESS_MORE_THAN_2SEC              2
-#define PHY_CENTRAL_CTRL_MOMENTARY_PRESS      3
-#define PHY_CENTRAL_CTRL_PRESS_MORE_THAN_2SEC 4
+#define PHY_NO_PRESS                          10
+#define PHY_MOMENTARY_PRESS                   11
+#define PHY_PRESS_MORE_THAN_2SEC              12
+#define PHY_CENTRAL_CTRL_MOMENTARY_PRESS      13
+#define PHY_CENTRAL_CTRL_PRESS_MORE_THAN_2SEC 14
 
 /* indexes for EEPROM information holding */
 #define EEPROM_IDX_ARDID    0  // length 1
@@ -40,9 +40,13 @@
 #define EEPROM_IDX_REG      2  // length 1
 #define EEPROM_IDX_RASPYIP  3  // length 6
 #define EEPROM_IDX_MODE     9  // length 1
-#define EEPROM_IDX_LIGHTS   10 // length 210 -> 30 (lights) x 6 (1 status + 1 type + 4 timer)  + 30 (buffer for future use)
-#define EEPROM_IDX_CENT_CTRL 220 // length
-#define EEPROM_IDX_SHADES   221 // length 150 -> 15 (shades) x 8 (4 status + 1 type + 1 pos timer + 2 tilt timer) + 30 (buffer for future use)
+#define EEPROM_IDX_LIGHTS   10 // length 240 -> 30 (lights) x 7 (1 status + 1 type + 4 timer + 1 input)  + 30 (buffer for future use)
+#define EEPROM_IDX_CENT_CTRL 250 // length
+#define EEPROM_IDX_SHADES   251 // length 150 -> 15 (shades) x 8 (4 status + 1 type + 1 pos timer + 2 tilt timer) + 30 (buffer for future use)
+
+/* length (in bytes) of the lights and shades fields */
+#define EEPROM_IDX_LIGHTS_LENGTH  7
+#define EEPROM_IDX_SHADES_LENGTH  8
 
 /* flags */
 #define EEPROM_FLG_SHADE_SYNC     1
@@ -53,6 +57,9 @@
 #define MODE_SHADES 1
 #define MODE_FAIL   100 /* returned by EEPROMGetMode() if couldn't load mode from EEPROM */
 
+/* input modes */
+#define EEPROM_INPUT_HOLD    0
+#define EEPROM_INPUT_RELEASE 1
 
 /* SD Card variables */
 #define SD_ARD_MEGA_CS  4
@@ -179,6 +186,12 @@ class Settings {
 
     /* Write light status into the EEPROM */
     static void EEPROMSetLightStatus(byte devID, byte status);
+
+    /* Write light input type into the EEPROM */
+    static byte EEPROMGetLightInputType(byte devID);
+
+    /* Read light input type from the EEPROM */
+    static void EEPROMSetLightInputType(byte devID, byte inputType);
 
     /* get last devID from the array of lightIDs */
     static byte getLastLightDevID();

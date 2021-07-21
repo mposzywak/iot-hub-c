@@ -265,34 +265,68 @@ static byte ARiFClass::update() {
         return CMD_MODE_SHADES;
         break;
       case CMD_TIMER_POS:
-        lastDevID = getValue(buff, DEVID);
-        lastShadePositionTimer = getValue(buff, VALUE);
-        client.println(F(HTTP_200_OK));
-        client.println();
-        client.stop();
-        return CMD_TIMER_POS;
+        if (mode == M_SHADES) {
+          lastDevID = getValue(buff, DEVID);
+          lastShadePositionTimer = getValue(buff, VALUE);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_TIMER_POS;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
         break;
       case CMD_TIMER_TILT:
-        lastDevID = getValue(buff, DEVID);
-        lastShadeTiltTimer = getValue(buff, VALUE);
-        client.println(F(HTTP_200_OK));
-        client.println();
-        client.stop();
-        return CMD_TIMER_TILT;
+        if (mode == M_SHADES) {
+          lastDevID = getValue(buff, DEVID);
+          lastShadeTiltTimer = getValue(buff, VALUE);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_TIMER_TILT;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
         break;
       case CMD_INPUT_HOLD:
-        lastDevID = getValue(buff, DEVID);
-        client.println(F(HTTP_200_OK));
-        client.println();
-        client.stop();
-        return CMD_INPUT_HOLD;
+        if (mode == M_LIGHTS) {
+          lastDevID = getValue(buff, DEVID);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_INPUT_HOLD;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
         break;
       case CMD_INPUT_REL:
-        lastDevID = getValue(buff, DEVID);
+        if (mode == M_LIGHTS) {
+          lastDevID = getValue(buff, DEVID);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_INPUT_REL;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
+        break;
+      case CMD_DEREGISTER:
         client.println(F(HTTP_200_OK));
         client.println();
         client.stop();
-        return CMD_INPUT_REL;
+        return CMD_DEREGISTER;
         break;
       case CMD_UNKNOWN:
         client.println(F(HTTP_500_Error));
@@ -367,6 +401,7 @@ static long ARiFClass::getValue(char *buff, int value) {
     if (strstr(buff, "cmd=shadeTTimer")) return CMD_TIMER_TILT;
     if (strstr(buff, "cmd=inputHold")) return CMD_INPUT_HOLD;
     if (strstr(buff, "cmd=inputRelease")) return CMD_INPUT_REL;
+    if (strstr(buff, "cmd=deregister")) return CMD_DEREGISTER;
     return CMD_UNKNOWN;
   }
 }

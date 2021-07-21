@@ -44,6 +44,15 @@ Where:
   - `<value>` indicates the type of the light device. The argument can take the following values:
     - `0` - the regular on/off light device
     - `1` - a timer based light device
+* **light input type**
+Command used to set the type of the light's input type. This setting is used to tell Arduino how the physical light switch will behave. It can either return to its normal position after pressing (push button) or it can stay in the position which he was switched to (toggle switch)
+Direction: in
+URL: `/?devID=<devid>&ardID=<ardid>&raspyID=<raspyid>&cmd=inputHold`
+URL: `/?devID=<devid>&ardID=<ardid>&raspyID=<raspyid>&cmd=inputRelease`
+Where:
+  - `<cmd>` indicates the type of the light's input. The following two commands are used:
+    - `inputHold` - the toggle switch
+    - `inputRelease` - the push button
 
 **Shade Device**
 ----
@@ -76,13 +85,13 @@ Where:
     - `45` - Tilt is half open
     - `90` - tilt is open
 
-* **shade position timer** *(not implemented)*
+* **shade position timer**
 This command is used to set the timer value of the shade. It specifies how many seconds it takes for the shade to reach from fully open to fully closed positions.  
 Direction: in  
 URL: `/?devID=<devid>&ardID=<ardid>&raspyID=<raspyid>&cmd=shadePTimer&value=<value>`  
 Where:
   - `<value>` indicates the position timer of the shade. Timer value can be set in range 10 - 65535 in unit of seconds.
-* **shade tilt timer** *(not implemented)*
+* **shade tilt timer** 
 This command is used to set the tilt timer value of the shade. It specifies how many miliseconds it takes for the shade tilt move to reach from fully open to fully closed.  
 Direction: in  
 URL: `/?devID=<devid>&ardID=<ardid>&raspyID=<raspyid>&cmd=shadeTTimer&value=<value>`  
@@ -103,7 +112,11 @@ Where:
 * **registration**
 This command is used to register the VelenHub in a Raspy (VelenGW). It is sent by the VelenGW and the `<devid>` is set always to `0`. VelenHub will read the `<ardid>` value and treat it as its own ArdID. VelenHub will also save the `<raspyid>`.  
 Direction: in  
-URL: `/?devID=0&ardID=<ardid>&raspyID=<raspyid>&cmd=register`  
+URL: `/?devID=0&ardID=<ardid>&raspyID=<raspyid>&cmd=register`
+* **deregistration**
+This command is used to deregister VelenHub . This command will delete the obtained `<raspyid>`, the VelenHub will start advertising beacon with ardID set to 0.  
+Direction: in  
+URL: `/?devID=0&ardID=<ardid>&raspyID=<raspyid>&cmd=deregister`  
 * **heartbeat**
 This command is used to send heartbeats by the VelenHub.  
 Direction: in  

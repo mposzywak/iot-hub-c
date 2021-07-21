@@ -43,6 +43,7 @@
 #define CMD_TIMER_TILT   16
 #define CMD_INPUT_HOLD   17
 #define CMD_INPUT_REL    18
+#define CMD_DEREGISTER   19
 #define CMD_UNKNOWN      200
 
 /* values returned by update() other than the CMDs above */
