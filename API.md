@@ -51,8 +51,8 @@ URL: `/?devID=<devid>&ardID=<ardid>&raspyID=<raspyid>&cmd=inputHold`
 URL: `/?devID=<devid>&ardID=<ardid>&raspyID=<raspyid>&cmd=inputRelease`
 Where:
   - `<cmd>` indicates the type of the light's input. The following two commands are used:
-    - `inputHold` - the toggle switch
-    - `inputRelease` - the push button
+    - `inputHold` - the switch input type
+    - `inputRelease` - the button input type
 
 **Shade Device**
 ----
