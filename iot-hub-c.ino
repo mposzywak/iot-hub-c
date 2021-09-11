@@ -13,7 +13,7 @@
 
 /*
 
-  CONTROLLINO - smarthouse test, Version 1.1.0
+  CONTROLLINO - smarthouse test, Version 1.2.0
 
   Used to control outputs by inputs and provide a REST-like API over network to that system.
 
@@ -22,7 +22,7 @@
   maciej.poszywak@gmail.com
 
 */
-#define VERSION "1.1.1"
+#define VERSION "1.1.0"
 
 /*
    ----------------
@@ -45,7 +45,7 @@ bool relaysNC = true;
 byte funcMode;
 
 /* MAC address used for initiall boot */
-byte mac[] = { 0x00, 0xAA, 0xBB, 0x12, 0xFA, 0x4C };
+byte mac[] = { 0x00, 0xAA, 0xBB, 0x23, 0xF9, 0x49 };
 
 /*
    ------------------------
