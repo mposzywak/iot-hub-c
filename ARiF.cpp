@@ -25,6 +25,7 @@ static int ARiFClass::lastShadeTiltTimer = 0;
 static byte ARiFClass::mode = 0;
 static byte ARiFClass::lastLightType = 0;
 static unsigned long ARiFClass::lastLightTimer = 0;
+static byte ARiFClass::ctrlON = 0;
 
 
 static byte ARiFClass::begin(byte version, byte mac[]) {
@@ -569,10 +570,6 @@ void ARiFClass::deregister() {
 static void ARiFClass::sendLightStatus(byte devID, byte value) {
   if (!isConnected) return;  // exit function if the link is dead;
   if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
-    Serial.print("devID: ");
-    Serial.print(devID);
-    Serial.print(" sending to "); // to be removed
-    Serial.print(ARiFClient.remoteIP()); // to be removed
     // Make a HTTP request:
     ARiFClient.print("POST /?devID=");
     ARiFClient.print(devID);
@@ -591,7 +588,7 @@ static void ARiFClass::sendLightStatus(byte devID, byte value) {
       }
     }
 
-    ARiFClient.print(F("&cmd=status&devType=digitOUT&dataType=bool&value="));
+    ARiFClient.print("&cmd=status&devType=digitOUT&dataType=bool&value=");
     if (value == VAL_OFF) {
       ARiFClient.print("0\n");
       Serial.println(" OFF. ");
@@ -602,7 +599,111 @@ static void ARiFClass::sendLightStatus(byte devID, byte value) {
 
 
     ARiFClient.println("Host: raspy");
+    ARiFClient.println("Connection: keep-alive");
+    ARiFClient.println();
+  } else {
+    Serial.println("Problem with connecting");
+  }
+}
+
+static void ARiFClass::sendTempStatus(byte devID, float value) {
+  if (!isConnected) return;  // exit function if the link is dead;
+  if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
+    // Make a HTTP request:
+    Serial.print("sending temp value: ");
+    Serial.println(value);
+    ARiFClient.print("POST /?devID=");
+    ARiFClient.print(devID);
+    ARiFClient.print("&ardID=");
+    ARiFClient.print(ardID);
+    ARiFClient.print("&raspyID=");
+    if (raspyID < 10) {
+      ARiFClient.print("00");
+      ARiFClient.print(raspyID);
+    } else {
+      if (raspyID >= 10 < 100) {
+        ARiFClient.print("0");
+        ARiFClient.print(raspyID);
+      } else {
+        ARiFClient.print(raspyID);
+      }
+    }
+
+    ARiFClient.print("&cmd=status&devType=temp&dataType=float&value=");
+    ARiFClient.println(value);
+      
+    ARiFClient.println("Host: raspy");
+    ARiFClient.println("Connection: keep-alive");
+    ARiFClient.println();
+  } else {
+    Serial.println("Problem with connecting");
+  }
+}
+
+static void ARiFClass::sendCtrlONStatus(byte value) {
+  if (!isConnected) return;  // exit function if the link is dead;
+  if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
+    ARiFClient.print(F("POST /?devID=0&ardID="));
+    ARiFClient.print(ardID);
+    ARiFClient.print(F("&raspyID="));
+    if (raspyID < 10) {
+      ARiFClient.print("00");
+      ARiFClient.print(raspyID);
+    } else {
+      if (raspyID >= 10 < 100) {
+        ARiFClient.print("0");
+        ARiFClient.print(raspyID);
+      } else {
+        ARiFClient.print(raspyID);
+      }
+    }
+
+    if (value == CMD_CTRL_ON) {
+      ARiFClient.print(F("&cmd=ctrlON\n"));
+      Serial.println("Sending ctrlON");
+    } else {
+      ARiFClient.print(F("&cmd=ctrlOFF\n"));
+      Serial.println("Sending ctrlOFF");
+    }
+
+    ARiFClient.println(F("Host: raspy"));
+    ARiFClient.println(F("Connection: close"));
+    ARiFClient.println();
+  } else {
+    Serial.println("Problem with connecting");
+  }
+}
+
+static void ARiFClass::sendSettings() {
+  if (!isConnected) return;  // exit function if the link is dead;
+  if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
+    ARiFClient.print(F("POST /?devID=0&ardID="));
+    ARiFClient.print(ardID);
+    ARiFClient.print(F("&raspyID="));
+    if (raspyID < 10) {
+      ARiFClient.print("00");
+      ARiFClient.print(raspyID);
+    } else {
+      if (raspyID >= 10 < 100) {
+        ARiFClient.print("0");
+        ARiFClient.print(raspyID);
+      } else {
+        ARiFClient.print(raspyID);
+      }
+    }
+    ARiFClient.print(F("&cmd=settings\n"));
+    Serial.println("Sending settings");
+    
+    ARiFClient.println("Host: raspy");
     ARiFClient.println("Connection: close");
+    ARiFClient.println("Content-Type: application/json");
+    String json = "{\"version\":\"";
+    json = json + VERSION;
+    json = json + "\",\"ctrlON\":" + ctrlON + ",\"mode\":" + mode + "}";
+    String content = "Content-Length: ";
+    content = content + json.length() + "\r\n";
+    ARiFClient.println(content);
+    ARiFClient.println(json);
     ARiFClient.println();
   } else {
     Serial.println("Problem with connecting");
@@ -619,4 +720,8 @@ static void ARiFClass::sendLightOFF(byte devID) {
 
 static void ARiFClass::setMode(byte m) {
   mode = m;
+}
+
+static void ARiFClass::setCtrlON(byte c) {
+  ctrlON = c;
 }

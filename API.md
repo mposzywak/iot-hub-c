@@ -16,6 +16,17 @@ Additionally the following parameters can be added:
 - `dataType` - indicates the type of data that is being transported in the `value` parameter (e. g. `dataType=bool`)
 - `value` - value that is associated with certain command (e. g. can indicate desired shade position)
 
+**Temperature Sensor Device**
+----
+
+* **temperature report**
+Command sent by VelenHub to indicate the temperature value received by the sensor.  
+Direction: out  
+URL: `/?devID=<devid>&ardID=<ardid>&raspyID=<raspyid>&cmd=status&devType=temperature&dataType=float&value=<value>`  
+Where:
+  - `<devid>` indicates the devID (the devID of the 1-wire sensors start from 40)
+  - `<value>` indicates the latest read temperature  
+
 **Light Device**
 ----
 
@@ -132,3 +143,9 @@ This command can be used to change the mode of VelenHub between Lights and Shade
 Direction: in  
 URL: `/?devID=0&ardID=<ardid>&raspyID=<raspyid>&cmd=modeLights`  
 URL: `/?devID=0&ardID=<ardid>&raspyID=<raspyid>&cmd=modeShades`  
+
+* **temperature unit**
+This command can be used to change the unit of Temperature measurement  
+Direction: in  
+URL: `/?devID=0&ardID=<ardid>&raspyID=<raspyid>&cmd=tempCel`  
+URL: `/?devID=0&ardID=<ardid>&raspyID=<raspyid>&cmd=tempFar`  

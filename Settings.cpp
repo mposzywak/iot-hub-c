@@ -79,6 +79,9 @@
     /* the lightID array (numbers must be consecutive) */
     static byte Settings::lightIDs[LIGHTS] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 };
 
+    /* 1-wire pin number */
+    static byte Settings::oneWirePin = 20;
+
 #elif defined(CONTROLLINO_MAXI) 
     static byte Settings::digitIN[IN_PINS] =   { CONTROLLINO_A0, 
                                                  CONTROLLINO_A1, 
@@ -118,10 +121,12 @@
 
     /* the lightID array (numbers must be consecutive) */
     static byte Settings::lightIDs[LIGHTS] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+
+    /* 1-wire pin number */
+    static byte Settings::oneWirePin = 20;
     
 #elif defined(ARDUINO_AVR_MEGA2560)
-    static byte Settings::digitIN[IN_PINS] =   { 2, 
-                                                 3, 
+    static byte Settings::digitIN[IN_PINS] =   { 3, 
                                                  5,
                                                  6,
                                                  7,
@@ -176,8 +181,7 @@
                                                  61,
                                                  62,
                                                  63,
-                                                 64,
-                                                 65 };
+                                                 64 };
                             
     /* The input pin devID array */
     //static byte Settings::digitINdevID[IN_PINS] = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 };
@@ -190,7 +194,9 @@
 
     /* the lightID array (numbers must be consecutive) */
     static byte Settings::lightIDs[LIGHTS] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28 };
-    
+
+    /* 1-wire pin number */
+    static byte Settings::oneWirePin = 2;
 #else 
   #error "Unsupported board"
 #endif
@@ -553,4 +559,8 @@ static File Settings::SDCardFileOpen(char *filename) {
 
 static void Settings::SDCardFileClose(File file) {
   file.close();
+}
+
+static byte Settings::getOneWirePin() {
+  return ONE_WIRE_PIN;
 }

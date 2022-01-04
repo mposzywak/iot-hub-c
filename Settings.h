@@ -8,23 +8,29 @@
 #ifndef SETTINGS_H_
 #define SETTINGS_H_
 
+/* version of the current code */
+#define VERSION "1.2.0"
+
 #if defined(CONTROLLINO_MEGA)
 #include <Controllino.h>
 #define IN_PINS  21
 #define OUT_PINS 21
 #define SHADES   10
 #define LIGHTS   21
+#define ONE_WIRE_PIN 20
 #elif defined(CONTROLLINO_MAXI)
 #include <Controllino.h>
 #define IN_PINS  12
 #define OUT_PINS 12
 #define SHADES   6
 #define LIGHTS   12
+#define ONE_WIRE_PIN 20
 #elif defined(ARDUINO_AVR_MEGA2560)
 #define IN_PINS  28
 #define OUT_PINS 28
 #define SHADES   14
 #define LIGHTS   28
+#define ONE_WIRE_PIN 2
 #endif
 
 /* types of physical button press */
@@ -79,6 +85,8 @@ class Settings {
     /* The output pin array */
     static byte digitOUT[OUT_PINS];
 
+    static byte oneWirePin;
+
     /* read a long value from EEPROM's given address */
     static unsigned long EEPROMReadlong(unsigned long address);
 
@@ -90,6 +98,7 @@ class Settings {
 
     /* write an int vlaue into EEPROM at a given address */
     static void Settings::EEPROMWriteInt(int address, int value);
+
 
   public:
 
@@ -232,6 +241,12 @@ class Settings {
 
     /* Close the file */
     static void SDCardFileClose(File file);
+
+    /*
+     * 1-wire related functions:
+     */
+
+    static byte getOneWirePin();
 };
 
 extern Settings Platform;

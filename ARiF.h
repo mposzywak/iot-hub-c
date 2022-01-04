@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <Ethernet.h>
 #include <EthernetUDP.h>
+#include "Settings.h"
 
 #ifndef ARIF_H_
 #define ARIF_H_
@@ -80,14 +81,31 @@
 #define DT_SYNC      3
 
 /* define modes of operations */
-#define M_SHADES     0
-#define M_LIGHTS     1
+#define M_SHADES     1
+#define M_LIGHTS     0
+
+/* define centralON status */
+#define ARIF_CTRLON_DISABLED  0
+#define ARIF_CTRLON_ENABLED   1
 
 class ARiFClass {
+  /* types definitions */
+
+  /* time structure */
   typedef struct t  {
     unsigned long tStart;
     unsigned long tTimeout;
   };
+
+  /* settings data structure */
+  typedef struct t_settings  {
+    byte major;
+    byte minor;
+    byte patch;
+    byte ctrlON;
+    byte mode;
+  };
+  
   private:
     /* holds the SW version which also can dictate what this particular modules will support, i. e. lights, shades, analog inputs etc.. */
     static byte version;
@@ -164,6 +182,9 @@ class ARiFClass {
     /* mode of operations */
     static byte mode;
 
+    /* status of the ctrlON function */
+    static byte ctrlON;
+
     //Tasks and their Schedules.
     static t t_func1;
     static t t_func2;
@@ -171,6 +192,8 @@ class ARiFClass {
     static bool timeCheck(struct t *t);
 
     static void timeRun(struct t *t);
+
+    static t_settings settings;
 
     
     /*
@@ -270,6 +293,12 @@ class ARiFClass {
     /* send information that the shade is not synced */
     static void sendShadeUnsynced(byte devID);
 
+    /* send information on the CtrlON feature */
+    static void sendCtrlONStatus(byte value);
+
+    /* send system settings and status */
+    static void sendSettings();
+
     /* deregister this arduino */
     static void deregister();
 
@@ -282,8 +311,14 @@ class ARiFClass {
     /* send the light OFF status message */
     static void ARiFClass::sendLightOFF(byte devID);
 
+    /* send the temperature value */
+    static void ARiFClass::sendTempStatus(byte devID, float value);
+
     /* set the arduino mode */
     static void ARiFClass::setMode(byte m);
+
+    /* set the ctrlON mode */
+    static void ARiFClass::setCtrlON(byte c);
 };
 
 extern ARiFClass ARiF;

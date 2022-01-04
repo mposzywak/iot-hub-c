@@ -10,6 +10,7 @@
 #include "Settings.h"
 #include "WebGUI.h"
 #include "Light.h"
+#include "Wire.h"
 
 /*
 
@@ -22,7 +23,7 @@
   maciej.poszywak@gmail.com
 
 */
-#define VERSION "1.1.0"
+
 
 /*
    ----------------
@@ -45,7 +46,7 @@ bool relaysNC = true;
 byte funcMode;
 
 /* MAC address used for initiall boot */
-byte mac[] = { 0x00, 0xAA, 0xBB, 0x23, 0xF9, 0x49 };
+byte mac[] = { 0x00, 0xAA, 0xBB, 0x12, 0xF6, 0x47 };
 
 /*
    ------------------------
@@ -159,7 +160,7 @@ void setup() {
       }
       inputType = Platform.EEPROMGetLightInputType(Platform.lightIDs[i]);
       Serial.print(F(" , input type: "));
-      
+
       if (inputType == DIGITOUT_SWITCH_PRESS_HOLD) {
         lights[i].setInputTypeHold();
         Serial.println(F("DIGITOUT_SWITCH_PRESS_HOLD"));
@@ -227,11 +228,16 @@ void setup() {
   centralCtrlMode = Platform.EEPROMGetLightCentral();
   if (centralCtrlMode == DIGITOUT_CENTRAL_CTRL_ENABLE) {
     Light::enableCentralCtrl();
+    ARiF.setCtrlON(ARIF_CTRLON_ENABLED);
   } else if (centralCtrlMode == DIGITOUT_CENTRAL_CTRL_DISABLE) {
     Light::disableCentralCtrl();
+    ARiF.setCtrlON(ARIF_CTRLON_DISABLED);
   } else {
     Light::disableCentralCtrl();
+    ARiF.setCtrlON(ARIF_CTRLON_DISABLED);
   }
+
+  Wire.begin();
 
   WebGUI.begin();
 
@@ -332,13 +338,13 @@ void loop() {
       devID = lights[i].getDevID();
       pressResult = PHY_NO_PRESS;
       pressResult = lights[i].isPressed();
- 
+
       if (pressResult == PHY_MOMENTARY_PRESS) {
         lights[i].toggle();
       } else if (pressResult == PHY_PRESS_MORE_THAN_2SEC) {
         lights[i].toggle();
       } else if (pressResult == PHY_CENTRAL_CTRL_MOMENTARY_PRESS) {
-        
+
         byte devIDCentralPress;
         for (int j = 0; j < LIGHTS; j++) {
           if (lights[j].getType() == DIGITOUT_ONOFF) {
@@ -433,6 +439,12 @@ void loop() {
           }
         }
       }
+/*      if (Light::getCentralCtrl() == DIGITOUT_CENTRAL_CTRL_ENABLE) {   /// to be deleted once sending settings works.
+        ARiF.sendCtrlONStatus(CMD_CTRL_ON);
+      } else if (Light::getCentralCtrl() == DIGITOUT_CENTRAL_CTRL_DISABLE) {
+        ARiF.sendCtrlONStatus(CMD_CTRL_OFF);
+      }*/
+      ARiF.sendSettings();
       break;
     case U_NOTHING:                                    /* Do nothing */
       break;
@@ -493,7 +505,7 @@ void loop() {
       lastDevID = ARiF.getLastDevID();
       for (int i = 0; i < LIGHTS; i++) {
         if (lights[i].getDevID() == lastDevID) {
-          lights[i].toggle();
+          lights[i].setON();
         }
       }
       break;
@@ -502,7 +514,7 @@ void loop() {
       lastDevID = ARiF.getLastDevID();
       for (int i = 0; i < LIGHTS; i++) {
         if (lights[i].getDevID() == lastDevID) {
-          lights[i].toggle();
+          lights[i].setOFF();
         }
       }
       break;
@@ -598,10 +610,12 @@ void loop() {
       break;
     case CMD_CTRL_ON:                                   /* ctrlON command received */
       Light::enableCentralCtrl();
+      ARiF.setCtrlON(ARIF_CTRLON_ENABLED);
       Platform.EEPROMSetLightCentral(DIGITOUT_CENTRAL_CTRL_ENABLE);
       break;
     case CMD_CTRL_OFF:                                  /* ctrlOFF command received */
       Light::disableCentralCtrl();
+      ARiF.setCtrlON(ARIF_CTRLON_DISABLED);
       Platform.EEPROMSetLightCentral(DIGITOUT_CENTRAL_CTRL_DISABLE);
       break;
     case CMD_DEREGISTER:
@@ -615,6 +629,26 @@ void loop() {
       break;
 
   }
+
+  /*
+    -----------------------------------
+    --- Handling of oneWire actions ---
+    -----------------------------------
+  */
+
+  Wire.update();
+  float tempValue;
+  byte deviceCount = Wire.getDeviceCount();
+  for (byte i = 0; i < deviceCount; i++) {
+    if (!Wire.isTemperatureRead(40 + i)) {
+      tempValue = Wire.getTemperature(40 + i);
+      ARiF.sendTempStatus(40 + i, tempValue);
+    }
+  }
+  /*if (!Wire.isTemperatureRead(40)) {
+    tempValue = Wire.getTemperature(40);
+    ARiF.sendTempStatus(40, tempValue);
+  }*/
 
   /* -- measurement code start -- */
   uint16_t finish = TCNT1;
