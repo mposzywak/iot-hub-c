@@ -26,6 +26,36 @@ The following features are currently supported:
 
 Feel free to contribute code to support a desired HW platform. For details regarding implementing new platforms see HW-SUPPORT.md.
 
+### Pin to devID apping
+
+The software creates devices objects which are referenced by a devID identifier. A device can be a single light, shade or temperature sensor. It has associated certain physical pins where it is connected. For example a device of type light will have two pins, one for to connect a switch (input pin) and second to connect a relay (output pin). 
+
+The following list provides pin to devID mapping:
+
+Controllino Mega (lights mode):
+Input: A0  - Output D0  - devID: 1
+Input: A1  - Output D1  - devID: 2
+Input: A2  - Output D2  - devID: 3
+Input: A3  - Output D3  - devID: 4
+Input: A4  - Output D4  - devID: 5
+Input: A5  - Output D5  - devID: 6
+Input: A6  - Output D6  - devID: 7
+Input: A7  - Output D7  - devID: 8
+Input: A8  - Output D8  - devID: 9
+Input: A9  - Output D9  - devID: 10
+Input: A10 - Output D10 - devID: 11
+Input: A11 - Output D11 - devID: 12
+Input: A12 - Output D12 - devID: 13
+Input: A13 - Output D13 - devID: 14
+Input: A14 - Output D14 - devID: 15
+Input: A15 - Output D15 - devID: 16
+Input: A16 - Output D16 - devID: 17
+Input: A17 - Output D17 - devID: 18
+Input: A18 - Output D18 - devID: 19
+Input: I0  - Output D19 - devID: 20
+Input: I1  - Output D20 - devID: 21
+
+
 ## Licensing
 
 This software is licensed under GPL.

@@ -24,6 +24,7 @@
 /* types of switches */
 #define DIGITOUT_SWITCH_PRESS_HOLD     0  /* the value indicates that the switch is of type press-and-hold, so the value of the output must change immediately upon pressure */
 #define DIGITOUT_SWITCH_PRESS_RELEASE  1  /* here the value indicates the switch is of type press-and-release, so the value of the output must change upon release of the switch (DEFAULT) */
+#define DIGITOUT_SIMPLE_HEAT           2
 
 class Light {
   /* types definitions */
