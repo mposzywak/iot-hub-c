@@ -3,9 +3,12 @@
 static byte ARiFClass::version;
 static byte ARiFClass::ardID = 0;
 static byte ARiFClass::raspyID;
-static byte ARiFClass::mac[] = { 0x00, 0xAA, 0xBB, 0xC6, 0xA5, 0x58 };
+static byte ARiFClass::mac[] = ARiF_INITIAL_MAC;
+static byte ARiFClass::raspyMAC[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 static IPAddress ARiFClass::raspyIP;
 static bool ARiFClass::DHCPFailed = false;
+static bool ARiFClass::restartNewMAC = false;
+static bool ARiFClass::initDHCPFailed = false;
 static byte ARiFClass::lastHeartbeat = 0;
 static bool ARiFClass::beaconSent = false;
 static EthernetUDP ARiFClass::UDP;
@@ -18,39 +21,94 @@ static bool ARiFClass::isRegistered;
 static bool ARiFClass::signalIPchange = false;
 static ARiFClass::t ARiFClass::t_func1 = {0, 1000 * ARiF_BEACON_INT}; /* for ARiF beacon interval */
 static ARiFClass::t ARiFClass::t_func2 = {0, 1000}; /* for everysecond on the DHCP checking */
+static ARiFClass::t ARiFClass::t_func3 = {0, 60000}; /* for every minute send settings with timeout */
 static byte ARiFClass::lastShadePosition = 0;
 static byte ARiFClass::lastShadeTilt = 0;
 static int ARiFClass::lastShadePositionTimer = 0;
 static int ARiFClass::lastShadeTiltTimer = 0;
 static byte ARiFClass::mode = 0;
 static byte ARiFClass::lastLightType = 0;
+static byte ARiFClass::lastLightInputType = 0;
+static byte ARiFClass::lastLightCtrlON = 0;
 static unsigned long ARiFClass::lastLightTimer = 0;
 static byte ARiFClass::ctrlON = 0;
-
+static byte ARiFClass::restore = ARIF_RESTORE_DISABLED;
 
 static byte ARiFClass::begin(byte version, byte mac[]) {
   ARiFClass::version = version;
-  //ARiFClass::mac = mac;
-  /* initialize Ethernet */
-  beginEthernet(mac);
+  beginEthernet();
   isRegistered = false;
   return 0;
 }
 
 static byte ARiFClass::begin(byte version, byte mac[], IPAddress raspyIP, byte ardID, byte raspyID) {
   ARiFClass::version = version;
-  //ARiFClass::mac = mac;
   ARiFClass::raspyIP = raspyIP;
   ARiFClass::ardID = ardID;
   ARiFClass::raspyID = raspyID;
-  beginEthernet(mac);
+  beginEthernet();
   isRegistered = true;
   return 0;
 }
 
+static byte ARiFClass::beginEthernet() {
+  /*for (byte i = 0; i < 6; i++) {
+    mac[i] = m[i];
+  }*/
+  if (Platform.EEPROMGetUseDefMAC() == EEPROM_FLG_MEM_MAC) {
+    Serial.println(F("Using MAC from EEPROM"));
+    Platform.EEPROMGetMAC(mac);
+  } else {
+    Serial.println(F("Using default MAC"));
+    mac[0] = 0x00;
+    mac[1] = 0xAA;
+    mac[2] = 0xBB;
+    mac[3] = 0x13;
+    mac[4] = 0xF9;
+    mac[5] = 0x45;
+  }
+  Serial.print(F("Using MAC: "));
+  printMAC(mac);
+  if (Ethernet.begin(mac) == 0) {
+    Serial.println(F("Failed to configure Ethernet using DHCP"));
+    isConnected = false;
+    initDHCPFailed = true; // mark that the DHCP failed at boot
+    return 0;
+  } else { /* Ethernet initialization succesfull */
+    Serial.println(F("NIC initialized. Ethernet cable connected."));
+    Serial.print(F("My IP address: "));
+    Serial.println(Ethernet.localIP());
+
+    UDP.beginMulticast(mip, ARiF_BEACON_PORT);
+    ARiFServer.begin();
+  }
+}
+
+static byte ARiFClass::replaceMAC() {
+  Serial.print(F("Received MAC from raspy: "));
+  printMAC(raspyMAC);
+  bool sameMAC = true;
+  for (byte i = 0; i < 6; i++) {
+    if (mac[i] != raspyMAC[i])
+      sameMAC = false;
+  }
+  if (sameMAC) {
+    Serial.print(F("Same MAC arrived from raspy."));
+    restartNewMAC = false;
+  } else {
+    Serial.print(F("New MAC arrived from raspy."));
+    for (byte i = 0; i < 6; i++) {
+      mac[i] = raspyMAC[i];
+  }
+    restartNewMAC = true;
+  }
+}
+
 static byte ARiFClass::update() {
+  if (initDHCPFailed) /* abort the function if we don't have an IP address */
+    return U_NOTHING;
   char beacon[ARiF_BEACON_LENGTH];
-  if (lastHeartbeat > 4) {
+  if (lastHeartbeat > ARiF_HB_TIMEOUT) {
     if (timeCheck(&t_func1)) {
       if (beaconSent == false) {
         snprintf(beacon, ARiF_BEACON_LENGTH, ARiF_BEACON_STRING, ardID);
@@ -78,6 +136,20 @@ static byte ARiFClass::update() {
     }
     /* CODE EXECUTED EVERY SECOND - END */
     timeRun(&t_func2);
+  }
+
+  if (timeCheck(&t_func3)) {
+    //Serial.println("Sending settings!!!");
+    sendSettings();
+    timeRun(&t_func3);
+  }
+
+  if (restartNewMAC == true) {
+    Serial.println(F("Restarting Ethernet after obtaining new MAC"));
+    Platform.EEPROMSetUseDefMAC(EEPROM_FLG_MEM_MAC);
+    Platform.EEPROMSetMAC(mac); /* this must be called before beginEthernet(), because it reads MAC from EEPROM */
+    beginEthernet();
+    restartNewMAC = false;
   }
 
   EthernetClient client = ARiFServer.available();
@@ -108,7 +180,7 @@ static byte ARiFClass::update() {
         } else {
           client.println(F(HTTP_403_Error)); /* write 403 because the unexpected HB */
           client.stop();                  /* send */
-          Serial.println("Unexpected heartbeat received. Sending 403.");
+          Serial.println(F("Unexpected heartbeat received. Sending 403."));
         }
         break;
       case CMD_REGISTER:
@@ -118,6 +190,8 @@ static byte ARiFClass::update() {
         raspyID = getValue(buff, RASPYID);
         raspyIP = client.remoteIP();
         isRegistered = true;
+        getMAC(buff, raspyMAC);
+        replaceMAC();
         client.println(F(HTTP_200_OK));
         client.println();
         client.stop();
@@ -323,14 +397,119 @@ static byte ARiFClass::update() {
           return U_NOTHING;
         }
         break;
+      case CMD_INPUT_OVERRIDE_ON:
+        if (mode == M_LIGHTS) {
+          lastDevID = getValue(buff, DEVID);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_INPUT_OVERRIDE_ON;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
+        break;
+      case CMD_INPUT_OVERRIDE_OFF:
+        if (mode == M_LIGHTS) {
+          lastDevID = getValue(buff, DEVID);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_INPUT_OVERRIDE_OFF;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
+        break;
+      case CMD_CTRL_ON:
+        if (mode == M_LIGHTS) {
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_CTRL_ON;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
+        break;
+      case CMD_CTRL_OFF:
+        if (mode == M_LIGHTS) {
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_CTRL_OFF;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
+        break;
+      case CMD_CTRL_DEV_ON:
+        if (mode == M_LIGHTS) {
+          lastDevID = getValue(buff, DEVID);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_CTRL_DEV_ON;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
+        break;
+      case CMD_CTRL_DEV_OFF:
+        if (mode == M_LIGHTS) {
+          lastDevID = getValue(buff, DEVID);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_CTRL_DEV_OFF;
+        } else {
+          client.println(F(HTTP_403_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
+        break;
+      case CMD_LIGHT_SETTINGS:
+        if (mode == M_LIGHTS) {
+          lastDevID = getValue(buff, DEVID);
+          Serial.print("lightSettings: ");
+          Serial.println(buff);
+          client.println(F(HTTP_200_OK));
+          client.println();
+          client.stop();
+          return CMD_LIGHT_SETTINGS;
+        } else {
+          client.println(F(HTTP_404_Error));
+          client.println();
+          client.stop();
+          return U_NOTHING;
+        }
+        break;
       case CMD_DEREGISTER:
         client.println(F(HTTP_200_OK));
         client.println();
         client.stop();
         return CMD_DEREGISTER;
         break;
+      case CMD_RESTORE:
+        client.println(F(HTTP_200_OK));
+        client.println();
+        client.stop();
+        restore = ARIF_RESTORE_ENABLED;
+        return CMD_RESTORE;
+        break;
       case CMD_UNKNOWN:
-        client.println(F(HTTP_500_Error));
+        client.println(F(HTTP_404_Error));
         client.stop();
         return CMD_UNKNOWN;
         break;
@@ -342,22 +521,6 @@ static byte ARiFClass::update() {
   }
 
   return U_NOTHING;
-}
-
-static byte ARiFClass::beginEthernet(byte mac[]) {
-  if (Ethernet.begin(mac) == 0) {
-    Serial.println(F("Failed to configure Ethernet using DHCP"));
-    isConnected = false;
-    DHCPFailed = true; // mark that the DHCP failed at boot
-    return 0;
-  } else { /* Ethernet initialization succesfull */
-    Serial.println(F("NIC initialized. Ethernet cable connected."));
-    Serial.print("My IP address: ");
-    Serial.println(Ethernet.localIP());
-
-    UDP.beginMulticast(mip, ARiF_BEACON_PORT);
-    ARiFServer.begin();
-  }
 }
 
 static long ARiFClass::getValue(char *buff, int value) {
@@ -403,6 +566,12 @@ static long ARiFClass::getValue(char *buff, int value) {
     if (strstr(buff, "cmd=inputHold")) return CMD_INPUT_HOLD;
     if (strstr(buff, "cmd=inputRelease")) return CMD_INPUT_REL;
     if (strstr(buff, "cmd=deregister")) return CMD_DEREGISTER;
+    if (strstr(buff, "cmd=inputOverrideON")) return CMD_INPUT_OVERRIDE_ON;
+    if (strstr(buff, "cmd=inputOverrideOFF")) return CMD_INPUT_OVERRIDE_OFF;
+    if (strstr(buff, "cmd=devCtrlON")) return CMD_CTRL_DEV_ON;
+    if (strstr(buff, "cmd=devCtrlOFF")) return CMD_CTRL_DEV_OFF;
+    if (strstr(buff, "cmd=lightSettings")) return CMD_LIGHT_SETTINGS;
+    if (strstr(buff, "cmd=restore")) return CMD_RESTORE;
     return CMD_UNKNOWN;
   }
 }
@@ -478,7 +647,7 @@ static void ARiFClass::sendShadeStatus(byte devID, byte dataType, byte value) {
     ARiFClient.println("Connection: close");
     ARiFClient.println();
   } else {
-    Serial.println("Problem with connecting");
+    Serial.println(F("Problem with connecting"));
   }
 }
 
@@ -567,45 +736,6 @@ void ARiFClass::deregister() {
   ardID = 0;
 }
 
-static void ARiFClass::sendLightStatus(byte devID, byte value) {
-  if (!isConnected) return;  // exit function if the link is dead;
-  if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
-    // Make a HTTP request:
-    ARiFClient.print("POST /?devID=");
-    ARiFClient.print(devID);
-    ARiFClient.print("&ardID=");
-    ARiFClient.print(ardID);
-    ARiFClient.print("&raspyID=");
-    if (raspyID < 10) {
-      ARiFClient.print("00");
-      ARiFClient.print(raspyID);
-    } else {
-      if (raspyID >= 10 < 100) {
-        ARiFClient.print("0");
-        ARiFClient.print(raspyID);
-      } else {
-        ARiFClient.print(raspyID);
-      }
-    }
-
-    ARiFClient.print("&cmd=status&devType=digitOUT&dataType=bool&value=");
-    if (value == VAL_OFF) {
-      ARiFClient.print("0\n");
-      Serial.println(" OFF. ");
-    } else if (value == VAL_ON) {
-      ARiFClient.print("1\n");
-      Serial.println(" ON. ");
-    }
-
-
-    ARiFClient.println("Host: raspy");
-    ARiFClient.println("Connection: keep-alive");
-    ARiFClient.println();
-  } else {
-    Serial.println("Problem with connecting");
-  }
-}
-
 static void ARiFClass::sendTempStatus(byte devID, float value) {
   if (!isConnected) return;  // exit function if the link is dead;
   if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
@@ -631,46 +761,12 @@ static void ARiFClass::sendTempStatus(byte devID, float value) {
 
     ARiFClient.print("&cmd=status&devType=temp&dataType=float&value=");
     ARiFClient.println(value);
-      
+
     ARiFClient.println("Host: raspy");
     ARiFClient.println("Connection: keep-alive");
     ARiFClient.println();
   } else {
-    Serial.println("Problem with connecting");
-  }
-}
-
-static void ARiFClass::sendCtrlONStatus(byte value) {
-  if (!isConnected) return;  // exit function if the link is dead;
-  if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
-    ARiFClient.print(F("POST /?devID=0&ardID="));
-    ARiFClient.print(ardID);
-    ARiFClient.print(F("&raspyID="));
-    if (raspyID < 10) {
-      ARiFClient.print("00");
-      ARiFClient.print(raspyID);
-    } else {
-      if (raspyID >= 10 < 100) {
-        ARiFClient.print("0");
-        ARiFClient.print(raspyID);
-      } else {
-        ARiFClient.print(raspyID);
-      }
-    }
-
-    if (value == CMD_CTRL_ON) {
-      ARiFClient.print(F("&cmd=ctrlON\n"));
-      Serial.println("Sending ctrlON");
-    } else {
-      ARiFClient.print(F("&cmd=ctrlOFF\n"));
-      Serial.println("Sending ctrlOFF");
-    }
-
-    ARiFClient.println(F("Host: raspy"));
-    ARiFClient.println(F("Connection: close"));
-    ARiFClient.println();
-  } else {
-    Serial.println("Problem with connecting");
+    Serial.println(F("Problem with connecting"));
   }
 }
 
@@ -692,30 +788,137 @@ static void ARiFClass::sendSettings() {
       }
     }
     ARiFClient.print(F("&cmd=settings\n"));
-    Serial.println("Sending settings");
-    
+    Serial.println(F("Sending settings"));
+
     ARiFClient.println("Host: raspy");
     ARiFClient.println("Connection: close");
     ARiFClient.println("Content-Type: application/json");
     String json = "{\"version\":\"";
     json = json + VERSION;
-    json = json + "\",\"ctrlON\":" + ctrlON + ",\"mode\":" + mode + "}";
+    json = json + "\",\"ctrlON\":" + ctrlON + ",\"mode\":" + mode + ", \"uptime\":" + millis() + ", \"restore\":" + restore + "}";
     String content = "Content-Length: ";
     content = content + json.length() + "\r\n";
     ARiFClient.println(content);
     ARiFClient.println(json);
     ARiFClient.println();
   } else {
-    Serial.println("Problem with connecting");
+    Serial.println(F("Problem with connecting"));
   }
 }
 
+static void ARiFClass::sendLightSettings(byte devID, unsigned long timer, byte type, byte inputType, byte ctrlON) {
+  if (!isConnected) return;  // exit function if the link is dead;
+  if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
+    ARiFClient.print(F("POST /?devID="));
+    ARiFClient.print(devID);
+    ARiFClient.print(F("&ardID="));
+    ARiFClient.print(ardID);
+    ARiFClient.print(F("&raspyID="));
+    if (raspyID < 10) {
+      ARiFClient.print("00");
+      ARiFClient.print(raspyID);
+    } else {
+      if (raspyID >= 10 < 100) {
+        ARiFClient.print("0");
+        ARiFClient.print(raspyID);
+      } else {
+        ARiFClient.print(raspyID);
+      }
+    }
+    ARiFClient.print(F("&cmd=lightSettings\n"));
+    Serial.println(F("Sending device settings"));
+
+    ARiFClient.println("Host: raspy");
+    ARiFClient.println("Connection: close");
+    ARiFClient.println("Content-Type: application/json");
+    String json = "{\"timer\":\"";
+    json = json + timer;
+    json = json + "\",\"ctrlON\":" + ctrlON + ",\"lightType\":" + type + ",\"lightInputType\":" + inputType + "}";
+    String content = "Content-Length: ";
+    content = content + json.length() + "\r\n";
+    ARiFClient.println(content);
+    ARiFClient.println(json);
+    ARiFClient.println();
+  } else {
+    Serial.println(F("Problem with connecting"));
+  }
+}
+
+static void ARiFClass::sendMessage(byte devID, byte messageType, byte value) {
+  if (!isConnected) return;  // exit function if the link is dead;
+  if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
+    // Make a HTTP request:
+    ARiFClient.print("POST /?devID=");
+    ARiFClient.print(devID);
+    ARiFClient.print("&ardID=");
+    ARiFClient.print(ardID);
+    ARiFClient.print("&raspyID=");
+    if (raspyID < 10) {
+      ARiFClient.print("00");
+      ARiFClient.print(raspyID);
+    } else {
+      if (raspyID >= 10 < 100) {
+        ARiFClient.print("0");
+        ARiFClient.print(raspyID);
+      } else {
+        ARiFClient.print(raspyID);
+      }
+    }
+
+    switch (messageType) {
+      case _MTYPE_LIGHT_TYPE:
+        ARiFClient.print(F("&cmd=lightType&devType=digitOUT&dataType=byte&value="));
+        ARiFClient.println(value);
+        break;
+      case _MTYPE_LIGHT_INPUT_TYPE:
+        ARiFClient.print(F("&cmd=lightInputType&devType=digitOUT&dataType=byte&value="));
+        ARiFClient.println(value);
+        break;
+      case _MTYPE_LIGHT_STATUS_ON:
+      case _MTYPE_LIGHT_STATUS_ON_USER:
+        ARiFClient.println("&cmd=status&devType=digitOUT&dataType=bool&value=1");
+        break;
+      case _MTYPE_LIGHT_STATUS_OFF:
+      case _MTYPE_LIGHT_STATUS_OFF_USER:
+        ARiFClient.println("&cmd=status&devType=digitOUT&dataType=bool&value=0");
+        break;
+    }
+
+    if (messageType == _MTYPE_LIGHT_STATUS_ON_USER || messageType == _MTYPE_LIGHT_STATUS_OFF_USER) {
+      ARiFClient.println("iot-user: true");
+    }
+
+    ARiFClient.println("Host: raspy");
+    ARiFClient.println("Connection: keep-alive");
+    ARiFClient.println();
+  } else {
+    Serial.println(F("Problem with connecting"));
+  }
+}
+
+static void ARiFClass::sendLightInputType(byte devID, byte value) {
+  sendMessage(devID, _MTYPE_LIGHT_INPUT_TYPE, value);
+}
+
+static void ARiFClass::sendLightType(byte devID, byte value) {
+  sendMessage(devID, _MTYPE_LIGHT_TYPE, value);
+}
+
+
 static void ARiFClass::sendLightON(byte devID) {
-  sendLightStatus(devID, VAL_ON);
+  sendMessage(devID, _MTYPE_LIGHT_STATUS_ON, 0);
+}
+
+static void ARiFClass::sendUserLightON(byte devID) {
+  sendMessage(devID, _MTYPE_LIGHT_STATUS_ON_USER, 0);
 }
 
 static void ARiFClass::sendLightOFF(byte devID) {
-  sendLightStatus(devID, VAL_OFF);
+  sendMessage(devID, _MTYPE_LIGHT_STATUS_OFF, 0);
+}
+
+static void ARiFClass::sendUserLightOFF(byte devID) {
+  sendMessage(devID, _MTYPE_LIGHT_STATUS_OFF_USER, 0);
 }
 
 static void ARiFClass::setMode(byte m) {
@@ -724,4 +927,40 @@ static void ARiFClass::setMode(byte m) {
 
 static void ARiFClass::setCtrlON(byte c) {
   ctrlON = c;
+}
+
+static void ARiFClass::getMAC(char *buff, byte *mac) {
+  char *pos;
+  pos = strstr(buff, "value=");
+  for (int i = 0; i < 6; i++) {
+    mac[i] = getByteFromHex(pos + 6 + (i * 3));
+  }
+}
+
+static void ARiFClass::printMAC(const byte *mac) {
+  for (int i = 0; i < 5; i++) {
+    if (mac[i] < 16)
+      Serial.print("0");
+    Serial.print(mac[i], HEX);
+    Serial.print(":");
+  }
+  Serial.println(mac[5], HEX);
+}
+
+static byte ARiFClass::getByteFromHex(const char *string) {
+  byte v1, v2;
+  v1 = nibble(string[0]);
+  v2 = nibble(string[1]);
+
+  return (v1 * 16) + v2;
+}
+
+static byte ARiFClass::nibble(char c) {
+  if (c >= '0' && c <= '9')
+    return c - '0';
+  if (c >= 'a' && c <= 'f')
+    return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F')
+    return c - 'A' + 10;
+  return 0;  // Not a valid hexadecimal character
 }

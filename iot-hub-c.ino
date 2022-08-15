@@ -14,9 +14,36 @@
 
 /*
 
-  CONTROLLINO - smarthouse test, Version 1.2.0
+  CONTROLLINO - smarthouse test, Version BarnGA-0.4
 
   Used to control outputs by inputs and provide a REST-like API over network to that system.
+
+  RELEASE NOTES:
+
+  BarnGA-0.4
+    - Added 1-wire temp sensor
+    - implemented factory reset on "restore" cmd and on new install.
+    - tag for centralON feature (each device can be marked for being applicable for centralON), new digitIO device commands:
+       - devCtrlON
+       - devCtrlOFF
+    - use MAC address provided by raspy on registration
+    - Implemented device settings sent as JSON.
+    - added uptime in miliseconds to arduino settings sent as JSON.
+    - Issues/limitations found:
+       - The ctrlON function works only if the device (last pin) is set to inputRelease mode.
+
+  BarnGA-0.3.1
+    - fixed bug that was shutting down networking after 12 hours
+    - added MAC printing on init
+
+  BarnGA-0.3
+    - fixed the issue with code getting stuck after initial DHCP fails.
+
+  BarnGA-0.2
+    - Increased the ARiF timer to 10s
+    - Changed MAC address
+
+  BarnGA - initial version to support lights in Libor's Barn
 
   Created 8 Oct 2019
   by Maciej
@@ -46,7 +73,7 @@ bool relaysNC = true;
 byte funcMode;
 
 /* MAC address used for initiall boot */
-byte mac[] = { 0x00, 0xAA, 0xBB, 0x12, 0xF6, 0x47 };
+byte mac[] = { 0x00, 0xAA, 0xBB, 0x13, 0xF9, 0x76 };
 
 /*
    ------------------------
@@ -88,6 +115,16 @@ void setup() {
   Serial.print(F("Version: "));
   Serial.println(F(VERSION));
 
+  //Platform.EEPROMSetUID();
+
+  if (Platform.EEPROMIsUIDSet() == true) {
+    Serial.println(F("UID set - running normally"));
+  } else {
+    Serial.println(F("UID not set - restoring EEPROM to factory defaults"));
+    Platform.EEPROMRaze();
+    Platform.EEPROMSetUID();
+  }
+
   /* Set the default mode of the device based on the EEPROM value */
   funcMode = Platform.EEPROMGetMode();
 
@@ -97,88 +134,11 @@ void setup() {
   }
 
   if (funcMode == MODE_SHADES) {
-    /* initialize the shades */
-    Serial.println(F("Initialize system as: MODE_SHADES"));
-    byte posTimer;
-    int tiltTimer;
-    for (int i = 0; i < SHADES; i++) {
-      shades[i].init(Settings::shadeIDs[i]);
-      WebGUI.shadeInit(i, Settings::shadeIDs[i]);
-      posTimer = Platform.EEPROMGetShadePosTimer(Platform.shadeIDs[i]);
-      tiltTimer = Platform.EEPROMGetShadeTiltTimer(Platform.shadeIDs[i]);
-      /* if recorded EEPROM value is different than the allowed ones, overwrite EEPROM with default */
-      if (posTimer != Shade::validatePositionTimer(posTimer)) {
-        Platform.EEPROMSetShadePosTimer(Platform.shadeIDs[i], Shade::validatePositionTimer(posTimer));
-      }
-      if (tiltTimer != Shade::validateTiltTimer(tiltTimer)) {
-        Platform.EEPROMSetShadeTiltTimer(Platform.shadeIDs[i], Shade::validateTiltTimer(tiltTimer));
-      }
-      Serial.print(F("Shade: "));
-      Serial.print(shades[i].getDevID());
-      Serial.print(F(", posTimer: "));
-      Serial.print(posTimer);
-      Serial.print(F(", tiltTimer: "));
-      Serial.println(tiltTimer);
-    }
-    for (int i = 0; i < LIGHTS; i++) {
-      WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_TIMER);
-    }
-    WebGUI.setSystemMode(M_WEBGUI_SHADES);
+    initializeShades();
   } else if (funcMode == MODE_LIGHTS) {
-    /* initialize the lights */
-    Serial.println(F("Initialize system as: MODE_LIGHTS"));
-    byte type;
-    unsigned long timer;
-    byte inputType;
-    for (int i = 0; i < LIGHTS; i++) {
-      type = Platform.EEPROMGetLightType(Platform.lightIDs[i]);
-      if (type == DIGITOUT_ONOFF) {
-        lights[i].init(Platform.lightIDs[i], DIGITOUT_ONOFF);
-        Serial.print(F("Light: "));
-        Serial.print(Platform.lightIDs[i]);
-        Serial.print(F(" set to: DIGITOUT_ONOFF"));
-        WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_ONOFF);
-      } else if (type == DIGITOUT_TIMER) {
-        timer = Platform.EEPROMGetLightTimer(Platform.lightIDs[i]);
-        Serial.print(F("Light: "));
-        Serial.print(Platform.lightIDs[i]);
-        Serial.print(F(" set to: DIGITOUT_TIMER, with timer:"));
-        Serial.print(timer);
-        WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_ONOFF);
-        lights[i].init(Platform.lightIDs[i], DIGITOUT_TIMER);
-        lights[i].setTimer(timer);
-        WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_TIMER);
-        WebGUI.lightSetTimer(Platform.lightIDs[i], timer);
-      } else {
-        /* if type cannot be recognized set it by default to DIGITOUT_ONOFF */
-        lights[i].init(Platform.lightIDs[i], DIGITOUT_ONOFF);
-        Serial.print(F("Light: "));
-        Serial.print(Platform.lightIDs[i]);
-        Serial.print(F(" set to: DIGITOUT_ONOFF (defaulting)"));
-        WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_ONOFF);
-        Platform.EEPROMSetLightConfig(Platform.lightIDs[i], DIGITOUT_ONOFF, DIGITOUT_DEFAULT_TIMER);
-      }
-      inputType = Platform.EEPROMGetLightInputType(Platform.lightIDs[i]);
-      Serial.print(F(" , input type: "));
-
-      if (inputType == DIGITOUT_SWITCH_PRESS_HOLD) {
-        lights[i].setInputTypeHold();
-        Serial.println(F("DIGITOUT_SWITCH_PRESS_HOLD"));
-      } else if (inputType == DIGITOUT_SWITCH_PRESS_RELEASE) {
-        lights[i].setInputTypeRelease();
-        Serial.println(F("DIGITOUT_SWITCH_PRESS_RELEASE"));
-      } else {
-        /* if inputType cannot be recognized set it by default to DIGITOUT_SWITCH_PRESS_RELEASE */
-        lights[i].setInputTypeRelease();
-        Platform.EEPROMSetLightInputType(Platform.lightIDs[i], DIGITOUT_SWITCH_PRESS_RELEASE);
-        Serial.println(F("DIGITOUT_SWITCH_PRESS_RELEASE (defaulting)"));
-      }
-    }
-    for (int i = 0; i < SHADES; i++) {
-      WebGUI.shadeInit(i, Settings::shadeIDs[i]);
-    }
-    WebGUI.setSystemMode(M_WEBGUI_LIGHTS);
+    initializeLights();
   }
+
 
   /* disable SD card on the Ethernet shield */ // to be removed, this is part of the Settings::SDCardInit()
   //pinMode(4, OUTPUT);
@@ -197,6 +157,13 @@ void setup() {
   /* get the registration data from EEPROM */
   isRegistered = Platform.EEPROMIsRegistered();
   //isRegistered = false;
+
+  /*Serial.print("Using MAC address: ");
+    char macbuff[17];
+    sprintf(macbuff, "%x:%x:%x:%x:%x:%x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    Serial.println(macbuff);*/
+
+  //Platform.EEPROMSetUseDefMAC(EEPROM_FLG_DEF_MAC);
 
   if (isRegistered) {
     Serial.print("Arduino registered with ardID: ");
@@ -340,6 +307,7 @@ void loop() {
       pressResult = lights[i].isPressed();
 
       if (pressResult == PHY_MOMENTARY_PRESS) {
+        Serial.println(F("press detected"));
         lights[i].toggle();
       } else if (pressResult == PHY_PRESS_MORE_THAN_2SEC) {
         lights[i].toggle();
@@ -349,10 +317,12 @@ void loop() {
         for (int j = 0; j < LIGHTS; j++) {
           if (lights[j].getType() == DIGITOUT_ONOFF) {
             devIDCentralPress = lights[j].getDevID();
-            lights[j].setON();
-            WebGUI.lightSetON(devIDCentralPress);
-            ARiF.sendLightON(devIDCentralPress);
-            delay(DIGITOUT_CENTRAL_CTRL_DELAY);
+            if (lights[j].getCtrlON() == DIGITOUT_CTRLON_ON) {
+              lights[j].setON();
+              WebGUI.lightSetON(devIDCentralPress);
+              ARiF.sendUserLightON(devIDCentralPress);
+              delay(DIGITOUT_CENTRAL_CTRL_DELAY);
+            }
           }
         }
       } else if (pressResult == PHY_CENTRAL_CTRL_PRESS_MORE_THAN_2SEC) {
@@ -360,21 +330,23 @@ void loop() {
         for (int k = 0; k < LIGHTS; k++) {
           if (lights[k].getType() == DIGITOUT_ONOFF) {
             devIDCentralPress = lights[k].getDevID();
-            lights[k].setOFF();
-            WebGUI.lightSetOFF(devIDCentralPress);
-            ARiF.sendLightOFF(devIDCentralPress);
-            delay(DIGITOUT_CENTRAL_CTRL_DELAY);
+            if (lights[k].getCtrlON() == DIGITOUT_CTRLON_ON) {
+              lights[k].setOFF();
+              WebGUI.lightSetOFF(devIDCentralPress);
+              ARiF.sendUserLightOFF(devIDCentralPress);
+              delay(DIGITOUT_CENTRAL_CTRL_DELAY);
+            }
           }
         }
       }
 
       if (lights[i].justTurnedON()) {
         WebGUI.lightSetON(devID);
-        ARiF.sendLightON(devID);
+        ARiF.sendUserLightON(devID);
       }
       if (lights[i].justTurnedOFF()) {
         WebGUI.lightSetOFF(devID);
-        ARiF.sendLightOFF(devID);
+        ARiF.sendUserLightOFF(devID);
       }
     }
   }
@@ -419,31 +391,11 @@ void loop() {
     case U_CONNECTED:                                  /* ARiF connection with the Raspy has been re-established (or established for the first time) */
       Serial.println("Connected back!");
       if (funcMode == MODE_SHADES) {
-        for (int i = 0; i < SHADES; i++) {
-          if (shades[i].isSynced()) {
-            ARiF.sendShadeSynced(Settings::shadeIDs[i]);
-            ARiF.sendShadeTilt(Settings::shadeIDs[i], shades[i].getTilt());
-            ARiF.sendShadePosition(Settings::shadeIDs[i], shades[i].getCurrentPosition());
-          } else {
-            ARiF.sendShadeUnsynced(Settings::shadeIDs[i]);
-          }
-        }
+        sendShadeStatus();
       } else if (funcMode == MODE_LIGHTS) {
-        byte devID;
-        for (int i = 0; i < LIGHTS; i++) {
-          devID = lights[i].getDevID();
-          if (lights[i].getStatus()) {
-            ARiF.sendLightON(devID);
-          } else {
-            ARiF.sendLightOFF(devID);
-          }
-        }
+        sendLightStatus();
       }
-/*      if (Light::getCentralCtrl() == DIGITOUT_CENTRAL_CTRL_ENABLE) {   /// to be deleted once sending settings works.
-        ARiF.sendCtrlONStatus(CMD_CTRL_ON);
-      } else if (Light::getCentralCtrl() == DIGITOUT_CENTRAL_CTRL_DISABLE) {
-        ARiF.sendCtrlONStatus(CMD_CTRL_OFF);
-      }*/
+
       ARiF.sendSettings();
       break;
     case U_NOTHING:                                    /* Do nothing */
@@ -501,7 +453,7 @@ void loop() {
       }
       break;
     case CMD_LIGHTON:                                  /* lightON command received */
-      Serial.print(F("Received lightON command"));
+      Serial.println(F("Received lightON command"));
       lastDevID = ARiF.getLastDevID();
       for (int i = 0; i < LIGHTS; i++) {
         if (lights[i].getDevID() == lastDevID) {
@@ -510,7 +462,7 @@ void loop() {
       }
       break;
     case CMD_LIGHTOFF:                                 /* lightOFF command received */
-      Serial.print(F("Received lightOFF command"));
+      Serial.println(F("Received lightOFF command"));
       lastDevID = ARiF.getLastDevID();
       for (int i = 0; i < LIGHTS; i++) {
         if (lights[i].getDevID() == lastDevID) {
@@ -527,6 +479,7 @@ void loop() {
         if (lights[i].getDevID() == lastDevID) {
           lights[i].setType(lastLightType);
           Platform.EEPROMSetLightType(lastDevID, lastLightType);
+          ARiF.sendLightSettings(lastDevID, lights[i].getTimer(), lastLightType, lights[i].getInputType(), lights[i].getCtrlON());
         }
       }
       WebGUI.lightSetType(lastDevID, ARiF.getLastLightType());
@@ -540,6 +493,7 @@ void loop() {
         if (lights[i].getDevID() == lastDevID) {
           lights[i].setTimer(lastLightTimer);
           Platform.EEPROMSetLightTimer(lastDevID, lastLightTimer);
+          ARiF.sendLightSettings(lastDevID, lastLightTimer, lights[i].getType(), lights[i].getInputType(), lights[i].getCtrlON());
         }
       }
       WebGUI.lightSetTimer(lastDevID, ARiF.getLastLightTimer());
@@ -595,6 +549,8 @@ void loop() {
         if (lights[i].getDevID() == lastDevID) {
           lights[i].setInputTypeHold();
           Platform.EEPROMSetLightInputType(lastDevID, DIGITOUT_SWITCH_PRESS_HOLD);
+          //ARiF.sendLightInputType(lastDevID, DIGITOUT_SWITCH_PRESS_HOLD);
+          ARiF.sendLightSettings(lastDevID, lights[i].getTimer(), lights[i].getType(), DIGITOUT_SWITCH_PRESS_HOLD, lights[i].getCtrlON());
         }
       }
       break;
@@ -605,26 +561,85 @@ void loop() {
         if (lights[i].getDevID() == lastDevID) {
           lights[i].setInputTypeRelease();
           Platform.EEPROMSetLightInputType(lastDevID, DIGITOUT_SWITCH_PRESS_RELEASE);
+          //ARiF.sendLightInputType(lastDevID, DIGITOUT_SWITCH_PRESS_RELEASE);
+          ARiF.sendLightSettings(lastDevID, lights[i].getTimer(), lights[i].getType(), DIGITOUT_SWITCH_PRESS_RELEASE, lights[i].getCtrlON());
+        }
+      }
+      break;
+    case CMD_INPUT_OVERRIDE_ON:                         /* inputOverrideOn command received */
+      Serial.println(F("Received inputOverrideOn command. "));
+      lastDevID = ARiF.getLastDevID();
+      for (int i = 0; i < LIGHTS; i++) {
+        if (lights[i].getDevID() == lastDevID) {
+          lights[i].setInputTypeSimpleHeatOverrideOn();
+          Platform.EEPROMSetLightInputType(lastDevID, DIGITOUT_SWITCH_HEAT_OVERRIDE_ON);
+          //ARiF.sendLightInputType(lastDevID, DIGITOUT_SWITCH_HEAT_OVERRIDE_ON);
+          ARiF.sendLightSettings(lastDevID, lights[i].getTimer(), lights[i].getType(), DIGITOUT_SWITCH_HEAT_OVERRIDE_ON, lights[i].getCtrlON());
+        }
+      }
+      break;
+    case CMD_INPUT_OVERRIDE_OFF:                         /* inputOverrideOff command received */
+      Serial.println(F("Received inputOverrideOff command. "));
+      lastDevID = ARiF.getLastDevID();
+      for (int i = 0; i < LIGHTS; i++) {
+        if (lights[i].getDevID() == lastDevID) {
+          lights[i].setInputTypeSimpleHeatOverrideOff();
+          Platform.EEPROMSetLightInputType(lastDevID, DIGITOUT_SWITCH_HEAT_OVERRIDE_OFF);
+          //ARiF.sendLightInputType(lastDevID, DIGITOUT_SWITCH_HEAT_OVERRIDE_OFF);
+          ARiF.sendLightSettings(lastDevID, lights[i].getTimer(), lights[i].getType(), DIGITOUT_SWITCH_HEAT_OVERRIDE_OFF, lights[i].getCtrlON());
+        }
+      }
+      break;
+    case CMD_CTRL_DEV_ON:                         /* devCtrlON command received */
+      Serial.println(F("Received devCtrlON command. "));
+      lastDevID = ARiF.getLastDevID();
+      for (int i = 0; i < LIGHTS; i++) {
+        if (lights[i].getDevID() == lastDevID) {
+          lights[i].setCtrlONEnabled();
+          Platform.EEPROMSetLightCtrlON(lastDevID, DIGITOUT_CTRLON_ON);
+          Platform.EEPROMGetLightCtrlON(lastDevID);
+          ARiF.sendLightSettings(lastDevID, lights[i].getTimer(), lights[i].getType(), lights[i].getInputType(), DIGITOUT_CTRLON_ON);
+        }
+      }
+      break;
+    case CMD_CTRL_DEV_OFF:                         /* devCtrlOFF command received */
+      Serial.println(F("Received devCtrlOFF command. "));
+      lastDevID = ARiF.getLastDevID();
+      for (int i = 0; i < LIGHTS; i++) {
+        if (lights[i].getDevID() == lastDevID) {
+          lights[i].setCtrlONDisabled();
+          Platform.EEPROMSetLightCtrlON(lastDevID, DIGITOUT_CTRLON_OFF);
+          Platform.EEPROMGetLightCtrlON(lastDevID);
+          ARiF.sendLightSettings(lastDevID, lights[i].getTimer(), lights[i].getType(), lights[i].getInputType(), DIGITOUT_CTRLON_OFF);
         }
       }
       break;
     case CMD_CTRL_ON:                                   /* ctrlON command received */
+      Serial.println(F("ctrlON received"));
       Light::enableCentralCtrl();
       ARiF.setCtrlON(ARIF_CTRLON_ENABLED);
       Platform.EEPROMSetLightCentral(DIGITOUT_CENTRAL_CTRL_ENABLE);
+      ARiF.sendSettings();
       break;
     case CMD_CTRL_OFF:                                  /* ctrlOFF command received */
+      Serial.println(F("ctrlOFF received"));
       Light::disableCentralCtrl();
       ARiF.setCtrlON(ARIF_CTRLON_DISABLED);
       Platform.EEPROMSetLightCentral(DIGITOUT_CENTRAL_CTRL_DISABLE);
+      ARiF.sendSettings();
+      break;
+    case CMD_RESTORE:
+      Serial.println(F("Received restore cmd"));
+      Platform.EEPROMClearUID();
+      ARiF.sendSettings();
       break;
     case CMD_DEREGISTER:
-      Serial.print(F("Received deregister cmd"));
+      Serial.println(F("Received deregister cmd"));
       ARiF.deregister();
       Platform.EEPROMDeregister();
       break;
     case CMD_UNKNOWN:                                  /* unknown command received */
-      Serial.print("Received unknown command from: ");
+      Serial.print(F("Received unknown command from: "));
       Serial.print(ARiF.getLastDevID());
       break;
 
@@ -648,7 +663,7 @@ void loop() {
   /*if (!Wire.isTemperatureRead(40)) {
     tempValue = Wire.getTemperature(40);
     ARiF.sendTempStatus(40, tempValue);
-  }*/
+    }*/
 
   /* -- measurement code start -- */
   uint16_t finish = TCNT1;
@@ -683,7 +698,6 @@ bool checkIotGwIP(IPAddress ip) {
   } else {
     iotGwIP = ip;
     Platform.EEPROMSetRaspyIP(ip);
-    Serial.println("IP changed. Writing to EEPROM");
     return false;
   }
 }
@@ -694,13 +708,12 @@ void setModeShades() {
   WebGUI.setSystemMode(M_WEBGUI_SHADES);
   Platform.EEPROMSetMode(MODE_SHADES);
   ARiF.setMode(M_SHADES);
+  ARiF.sendSettings();
   for (int i = 0; i < LIGHTS; i++) {
     lights[i].reset();
   }
-  for (int i = 0; i < SHADES; i++) {
-    shades[i].init(Settings::shadeIDs[i]);
-    WebGUI.shadeInit(i, Settings::shadeIDs[i]);
-  }
+  initializeShades();
+  sendShadeStatus();
 }
 
 /* set mode into lights */
@@ -710,13 +723,163 @@ void setModeLights() {
   WebGUI.setSystemMode(M_WEBGUI_LIGHTS);
   Platform.EEPROMSetMode(MODE_LIGHTS);
   ARiF.setMode(M_LIGHTS);
+  ARiF.sendSettings();
   for (int i = 0; i < SHADES; i++) {
     shades[i].reset();
   }
+  initializeLights();
+  sendLightStatus();
+}
+
+/* initialize all Lights from the EEPROM */
+void initializeLights() {
+  Serial.println(F("Initialize system as: MODE_LIGHTS"));
+  byte type;
+  unsigned long timer;
+  byte inputType;
+  byte overrideFlag;
+  byte devCtrlON;
+
+  for (int i = 0; i < LIGHTS; i++) {
+    type = Platform.EEPROMGetLightType(Platform.lightIDs[i]);
+    timer = Platform.EEPROMGetLightTimer(Platform.lightIDs[i]);
+
+    if (type == DIGITOUT_ONOFF) {
+      lights[i].init(Platform.lightIDs[i], DIGITOUT_ONOFF);
+      Serial.print(F("Light: "));
+      Serial.print(Platform.lightIDs[i]);
+      Serial.print(F(" set to: DIGITOUT_ONOFF"));
+      WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_ONOFF);
+    } else if (type == DIGITOUT_TIMER) {
+      Serial.print(F("Light: "));
+      Serial.print(Platform.lightIDs[i]);
+      Serial.print(F(" set to: DIGITOUT_TIMER, with timer:"));
+      Serial.print(timer);
+      lights[i].init(Platform.lightIDs[i], DIGITOUT_TIMER);
+      WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_TIMER);
+      WebGUI.lightSetTimer(Platform.lightIDs[i], timer);
+    } else if (type == DIGITOUT_SIMPLE_HEAT) {
+      Serial.print(F("Device: "));
+      Serial.print(Platform.lightIDs[i]);
+      Serial.print(F(" set to: DIGITOUT_SIMPLE_HEAT"));
+      lights[i].init(Platform.lightIDs[i], DIGITOUT_SIMPLE_HEAT);
+    } else {
+      /* if type cannot be recognized set it by default to DIGITOUT_ONOFF */
+      lights[i].init(Platform.lightIDs[i], DIGITOUT_ONOFF);
+      Serial.print(F("Light: "));
+      Serial.print(Platform.lightIDs[i]);
+      Serial.print(F(" set to: DIGITOUT_ONOFF (defaulting)"));
+      WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_ONOFF);
+      Platform.EEPROMSetLightConfig(Platform.lightIDs[i], DIGITOUT_ONOFF, DIGITOUT_DEFAULT_TIMER);
+    }
+    /* timer must be set after init() */
+    lights[i].setTimer(timer);
+
+    inputType = Platform.EEPROMGetLightInputType(Platform.lightIDs[i]);
+    Serial.print(F(" , input type: "));
+
+    if (inputType == DIGITOUT_SWITCH_PRESS_HOLD) {
+      lights[i].setInputTypeHold();
+      Serial.print(F("DIGITOUT_SWITCH_PRESS_HOLD"));
+    } else if (inputType == DIGITOUT_SWITCH_PRESS_RELEASE) {
+      lights[i].setInputTypeRelease();
+      Serial.print(F("DIGITOUT_SWITCH_PRESS_RELEASE"));
+    } else if (inputType == DIGITOUT_SWITCH_HEAT_OVERRIDE_ON) {
+      lights[i].setInputTypeSimpleHeatOverrideOn();
+      Serial.print(F("DIGITOUT_SWITCH_HEAT_OVERRIDE_ON"));
+    } else if (inputType == DIGITOUT_SWITCH_HEAT_OVERRIDE_OFF) {
+      lights[i].setInputTypeSimpleHeatOverrideOff();
+      Serial.print(F("DIGITOUT_SWITCH_HEAT_OVERRIDE_OFF"));
+    } else if (inputType == DIGITOUT_SWITCH_HEAT_TEMP_SENSOR) {
+      lights[i].setInputTypeSimpleHeatTempSensor();
+      Serial.print(F("DIGITOUT_SWITCH_HEAT_TEMP_SENSOR"));
+    } else {
+      /* if inputType cannot be recognized set it by default to DIGITOUT_SWITCH_PRESS_RELEASE */
+      lights[i].setInputTypeRelease();
+      Platform.EEPROMSetLightInputType(Platform.lightIDs[i], DIGITOUT_SWITCH_PRESS_RELEASE);
+      Serial.println(F("DIGITOUT_SWITCH_PRESS_RELEASE (defaulting)"));
+    }
+    devCtrlON = Platform.EEPROMGetLightCtrlON(Platform.lightIDs[i]);
+    Serial.print(F(" CtrlON: "));
+    if (devCtrlON == DIGITOUT_CTRLON_ON) {
+      lights[i].setCtrlONEnabled();
+      Serial.print(F("Enabled, "));
+    } else if (devCtrlON == DIGITOUT_CTRLON_OFF) {
+      lights[i].setCtrlONDisabled();
+      Serial.print(F("Disabled, "));
+    } else {
+      lights[i].setCtrlONDisabled();
+      Serial.print(F("Disabled (defaulting), "));
+      Platform.EEPROMSetLightCtrlON(Platform.lightIDs[i], DIGITOUT_CTRLON_OFF);
+    }
+    Serial.print(F("timer: "));
+    Serial.println(lights[i].getTimer());
+  }
+
+  for (int i = 0; i < LIGHTS; i++) {
+    WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_TIMER);
+  }
+  WebGUI.setSystemMode(M_WEBGUI_LIGHTS);
+}
+
+/* Initialize all Shades from EEPROM */
+void initializeShades() {
+  Serial.println(F("Initialize system as: MODE_SHADES"));
+  byte posTimer;
+  int tiltTimer;
+  for (int i = 0; i < SHADES; i++) {
+    shades[i].init(Settings::shadeIDs[i]);
+    WebGUI.shadeInit(i, Settings::shadeIDs[i]);
+    posTimer = Platform.EEPROMGetShadePosTimer(Platform.shadeIDs[i]);
+    tiltTimer = Platform.EEPROMGetShadeTiltTimer(Platform.shadeIDs[i]);
+    /* if recorded EEPROM value is different than the allowed ones, overwrite EEPROM with default */
+    if (posTimer != Shade::validatePositionTimer(posTimer)) {
+      Platform.EEPROMSetShadePosTimer(Platform.shadeIDs[i], Shade::validatePositionTimer(posTimer));
+    }
+    if (tiltTimer != Shade::validateTiltTimer(tiltTimer)) {
+      Platform.EEPROMSetShadeTiltTimer(Platform.shadeIDs[i], Shade::validateTiltTimer(tiltTimer));
+    }
+    Serial.print(F("Shade: "));
+    Serial.print(shades[i].getDevID());
+    Serial.print(F(", posTimer: "));
+    Serial.print(posTimer);
+    Serial.print(F(", tiltTimer: "));
+    Serial.println(tiltTimer);
+  }
+
+  for (int i = 0; i < SHADES; i++) {
+    WebGUI.shadeInit(i, Settings::shadeIDs[i]);
+  }
+  WebGUI.setSystemMode(M_WEBGUI_SHADES);
+}
+
+/* ARiF send all Shades statuses and settings */
+void sendShadeStatus() {
+  for (int i = 0; i < SHADES; i++) {
+    if (shades[i].isSynced()) {
+      ARiF.sendShadeSynced(Settings::shadeIDs[i]);
+      ARiF.sendShadeTilt(Settings::shadeIDs[i], shades[i].getTilt());
+      ARiF.sendShadePosition(Settings::shadeIDs[i], shades[i].getCurrentPosition());
+    } else {
+      ARiF.sendShadeUnsynced(Settings::shadeIDs[i]);
+    }
+  }
+}
+
+/* ARiF send all Lights statuses and settings */
+void sendLightStatus() {
+  byte devID;
+  byte lightType;
+  byte lightInputType;
   for (int i = 0; i < LIGHTS; i++) {
     devID = lights[i].getDevID();
-    lights[i].init(Platform.lightIDs[i], DIGITOUT_ONOFF);
-    WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_ONOFF);
-    Platform.EEPROMSetLightType(devID, DIGITOUT_ONOFF);
+    lightType = lights[i].getType();
+    lightInputType = lights[i].getInputType();
+    if (lights[i].getStatus()) {
+      ARiF.sendLightON(devID);
+    } else {
+      ARiF.sendLightOFF(devID);
+    }
+    ARiF.sendLightSettings(devID, lights[i].getTimer(), lightType, lightInputType, lights[i].getCtrlON());
   }
 }

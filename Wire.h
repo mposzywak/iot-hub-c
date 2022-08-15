@@ -7,7 +7,7 @@
 #define WIRE_H_
 
 #define WIRE_PIN         2  /* pin number of the OneWire bus */
-#define WIRE_INTERVAL    5000  /* probing interval */
+#define WIRE_INTERVAL    30000  /* probing interval */
 #define WIRE_MAX_DEVICES 8
 
 class WireClass {

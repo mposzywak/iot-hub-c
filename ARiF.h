@@ -6,8 +6,11 @@
 #ifndef ARIF_H_
 #define ARIF_H_
 
+#define ARiF_INITIAL_MAC   { 0x00, 0xAA, 0xBB, 0x13, 0xF9, 0x45 }
+
 #define ARiF_HTTP_PORT 32302                  /* port used as the listening port for ARiF connections and destination port for outgoing ones */
-#define ARiF_HTTP_BUFF 150                    /* maximum readable length of the incoming HTTP message */
+#define ARiF_HTTP_BUFF 400                    /* maximum readable length of the incoming HTTP message */
+#define ARiF_HB_TIMEOUT 10                    /* ARiF HB timeout in seconds */
 #define ARiF_BEACON_INT 5                     /* interval which the beacon is sent at (in seconds) */
 #define ARiF_BEACON_LENGTH 15
 #define ARiF_BEACON_PORT 5007                 /* Destination port where the beacon message is sent to */
@@ -45,6 +48,12 @@
 #define CMD_INPUT_HOLD   17
 #define CMD_INPUT_REL    18
 #define CMD_DEREGISTER   19
+#define CMD_INPUT_OVERRIDE_ON    20
+#define CMD_INPUT_OVERRIDE_OFF   21
+#define CMD_CTRL_DEV_ON  22
+#define CMD_CTRL_DEV_OFF 23
+#define CMD_LIGHT_SETTINGS 24
+#define CMD_RESTORE      25
 #define CMD_UNKNOWN      200
 
 /* values returned by update() other than the CMDs above */
@@ -61,7 +70,8 @@
 #define RASPYID 2
 #define CMD     3
 #define VALUE   4
-#define VALUE_L 5
+#define VALUE_L 5 /* value long */
+#define VALUE_M 6 /* value MAC address */
 
 /* Shade status to control sendShadeStatus() CMD value */
 #define VAL_MOVE_UP     2
@@ -87,6 +97,18 @@
 /* define centralON status */
 #define ARIF_CTRLON_DISABLED  0
 #define ARIF_CTRLON_ENABLED   1
+
+/* define factore restore status */
+#define ARIF_RESTORE_DISABLED 0
+#define ARIF_RESTORE_ENABLED  1
+
+/* INTERNAL sendMessage() messageTypes */
+#define _MTYPE_LIGHT_TYPE         0
+#define _MTYPE_LIGHT_INPUT_TYPE   1
+#define _MTYPE_LIGHT_STATUS_ON    2
+#define _MTYPE_LIGHT_STATUS_OFF   3
+#define _MTYPE_LIGHT_STATUS_ON_USER  4
+#define _MTYPE_LIGHT_STATUS_OFF_USER 5
 
 class ARiFClass {
   /* types definitions */
@@ -116,8 +138,11 @@ class ARiFClass {
     /* holds the raspyID that we are talking to */
     static byte raspyID;
 
-    /* holds the MAC address */
-    static byte mac[6];
+    /* holds the MAC address received from raspy */
+    static byte raspyMAC[6];
+
+    /* holds the MAC address used on Ethernet */
+    static byte mac[];
 
     /* holds the raspy IP we are talking to */
     static IPAddress raspyIP;
@@ -127,6 +152,10 @@ class ARiFClass {
     *  the Hub for at least one second rendering it unresponsive. 
     *  -- Workaround: reboot the Hub once Connctivity/DHCP server is fixed. */
     static bool DHCPFailed;
+    static bool initDHCPFailed;
+
+    /* variable indicating if Ethernet should be reloaded with the new MAC */
+    static bool restartNewMAC;
 
     /* stores value how many seconds ago last heartbeat was received */
     static byte lastHeartbeat;
@@ -161,10 +190,16 @@ class ARiFClass {
     /* variable holding shade tilt received by the last shadeTILT command */
     static byte lastShadeTilt;
 
-    /* variable holding light type received by the last lightType command */
+    /* variable holding light type received by the last settings command */
     static byte lastLightType;
 
-    /* variable holding light timer received by the last lightTimer command */
+    /* variable holding light type received by the last settings command */
+    static byte lastLightInputType;
+
+    /* variable holding light ctrlON received by the last settings command */
+    static byte lastLightCtrlON;
+
+    /* variable holding light timer received by the last settings command */
     static unsigned long lastLightTimer;
 
     /* variable holding last shade position timer */
@@ -188,12 +223,17 @@ class ARiFClass {
     //Tasks and their Schedules.
     static t t_func1;
     static t t_func2;
+    static t t_func3;
 
     static bool timeCheck(struct t *t);
 
     static void timeRun(struct t *t);
 
+    /* timer struct used to send settings regularly */
     static t_settings settings;
+
+    /* stores indicator if next reboot shall return to factory settings */
+    static byte restore;
 
     
     /*
@@ -201,10 +241,13 @@ class ARiFClass {
      */
 
     /* function to initialize the Ethernet interface and all server and client objects */
-    static byte beginEthernet(byte mac[]);
+    static byte beginEthernet();
 
     /* get single value from the ARiF URL */
     static long getValue(char *buff, int value);
+
+    /* get MAC address from the ARiF registration URL */
+    static void getMAC(char *buff, byte *mac);
 
     /* return true if the raspy IP address is same as the old one*/
     static bool checkIotGwIP(IPAddress ip);
@@ -216,6 +259,17 @@ class ARiFClass {
      * SS_STOPPED
      */
     static void sendShadeStatus(byte devID, byte dataType, byte value);
+
+    /* get the hex value of two digits and convert them into byte */
+    static byte getByteFromHex(const char *string);
+
+    /* convert single hex char to byte */
+    static byte nibble(char c);
+
+    /* verify if newly received MAC address from raspy is different then one that is saved.
+     * If it is, replace it and restart Ethernet and save the new MAC into EEPROM.
+     */
+    static byte replaceMAC();
     
   public:
 
@@ -293,11 +347,20 @@ class ARiFClass {
     /* send information that the shade is not synced */
     static void sendShadeUnsynced(byte devID);
 
-    /* send information on the CtrlON feature */
-    static void sendCtrlONStatus(byte value);
-
     /* send system settings and status */
     static void sendSettings();
+
+    /* send light specific settings */
+    static void sendLightSettings(byte devID, unsigned long timer, byte type, byte inputType, byte ctrlON);
+
+    /* send light Type */
+    static void sendLightType(byte devID, byte value);
+
+    /* send light input type  */
+    static void sendLightInputType(byte devID, byte value);
+
+    /* send a generic message to the raspy */
+    static void sendMessage(byte devID, byte messageType, byte value);
 
     /* deregister this arduino */
     static void deregister();
@@ -308,8 +371,14 @@ class ARiFClass {
     /* send the light ON status message */
     static void ARiFClass::sendLightON(byte devID);
 
+    /* send the light ON status message with a physical input triggered indication */
+    static void ARiFClass::sendUserLightON(byte devID);
+
     /* send the light OFF status message */
     static void ARiFClass::sendLightOFF(byte devID);
+
+    /* send the light OFF status message with a physical input triggered indication */
+    static void ARiFClass::sendUserLightOFF(byte devID);
 
     /* send the temperature value */
     static void ARiFClass::sendTempStatus(byte devID, float value);
@@ -319,6 +388,9 @@ class ARiFClass {
 
     /* set the ctrlON mode */
     static void ARiFClass::setCtrlON(byte c);
+
+    /* print MAC address in XX:XX:XX... format */
+    static void printMAC(const byte *mac);
 };
 
 extern ARiFClass ARiF;

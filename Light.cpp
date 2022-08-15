@@ -42,14 +42,18 @@ void Light::init(byte lightID, byte type) {
 
 void Light::setType(byte type) {
   this->type = type;
-  if (type == DIGITOUT_TIMER) {
+  /*if (type == DIGITOUT_TIMER) {
     this->timer = DIGITOUT_DEFAULT_TIMER;
-  }
+  }*/
 }
 
 void Light::setTimer(unsigned long timer) {
   this->timer = timer;
   this->onTimer.tTimeout = timer;
+}
+
+unsigned long Light::getTimer() {
+  return this->timer;
 }
 
 byte Light::getType() {
@@ -60,9 +64,21 @@ byte Light::getDevID() {
   return this->lightID;
 }
 
+void Light::setCtrlONEnabled() {
+  this->ctrlON = DIGITOUT_CTRLON_ON;
+}
+
+void Light::setCtrlONDisabled() {
+  this->ctrlON = DIGITOUT_CTRLON_OFF;
+}
+
+byte Light::getCtrlON() {
+  return this->ctrlON;
+}
+
 byte Light::isPressed() {
   if (timeCheck(&onTimer)) {
-    Serial.println("Turning off light after timer expired.");
+    Serial.println(F("Turning off light after timer expired."));
     setOFF();
   }
   if (inputType == DIGITOUT_SWITCH_PRESS_RELEASE) {
@@ -81,16 +97,16 @@ byte Light::isPressed() {
         /* EXECUTED ON BUTTON RELEASE - END */
         if (timeCheck(&buttonHold)) {
           if (this->lightID == Platform.getLastLightDevID() && getCentralCtrl() == DIGITOUT_CENTRAL_CTRL_ENABLE) {
-            Serial.println("Central ON pressed and hel");
+            Serial.println(F("Central ON pressed and hel"));
             inPinPressed = false;
             return PHY_CENTRAL_CTRL_PRESS_MORE_THAN_2SEC;
           }
-          Serial.println("Held up above 2 sec");
+          Serial.println(F("Held up above 2 sec"));
           inPinPressed = false;
           return PHY_PRESS_MORE_THAN_2SEC;
         }
         if (this->lightID == Platform.getLastLightDevID() && getCentralCtrl() == DIGITOUT_CENTRAL_CTRL_ENABLE) {
-          Serial.println("Central ON mementary pressed");
+          Serial.println(F("Central ON mementary pressed"));
           inPinPressed = false;
           return PHY_CENTRAL_CTRL_MOMENTARY_PRESS;
         }
@@ -101,7 +117,7 @@ byte Light::isPressed() {
         return PHY_NO_PRESS;
       }
     }
-  } else { /* inputType == DIGITOUT_SWITCH_PRESS_HOLD */
+  } else if (inputType == DIGITOUT_SWITCH_PRESS_HOLD || inputType == DIGITOUT_SWITCH_HEAT_OVERRIDE_OFF) {
     delay(10); // this delay here was placed in order for the press button result to be predictable
     if (inPinState != Settings::getInputPinValue(inPin) && inPinPressed == false) { /* indication that state of the input changed */
       inPinState = Settings::getInputPinValue(inPin);
@@ -117,37 +133,72 @@ byte Light::isPressed() {
       return PHY_MOMENTARY_PRESS;
     }
     return PHY_NO_PRESS; /* function must always return a value even if situation "shouldn't" happen. Otherwise the return value is unpredictable */
-  }
+  } else if (inputType == DIGITOUT_SWITCH_HEAT_OVERRIDE_ON) {
+    /* do nothing as we ignore the physical input pin */
+    //Serial.println(F("Override is on, doing nothing!"));
+    return PHY_NO_PRESS;
+  } 
   return PHY_NO_PRESS;
 }
 
 void Light::setON() {
-  Platform.setOutputPinValue(outPin, Light::high);
-  outPinState = Light::high;
-  justToggled = true;
-  if (type == DIGITOUT_TIMER) {
-    timeRun(&onTimer);
+  if (type == DIGITOUT_ONOFF || type == DIGITOUT_TIMER) {
+    Platform.setOutputPinValue(outPin, Light::high);
+    outPinState = Light::high;
+    justToggled = true;
+    if (type == DIGITOUT_TIMER) {
+      timeRun(&onTimer);
+    }
+  } else if (type == DIGITOUT_SIMPLE_HEAT) {
+    if (inputType == DIGITOUT_SWITCH_HEAT_OVERRIDE_ON) {
+      Platform.setOutputPinValue(outPin, Light::high);
+      outPinState = Light::high;
+      justToggled = true;
+    } else {
+      /* do nothing here */
+    }
   }
 }
 
 void Light::setOFF() {
-  Platform.setOutputPinValue(outPin, Light::low);
-  outPinState = Light::low;
-  justToggled = true;
+  if (type == DIGITOUT_ONOFF || type == DIGITOUT_TIMER) {
+    Platform.setOutputPinValue(outPin, Light::low);
+    outPinState = Light::low;
+    justToggled = true;
+  } else if (type == DIGITOUT_SIMPLE_HEAT) {
+    if (inputType == DIGITOUT_SWITCH_HEAT_OVERRIDE_ON) {
+      Platform.setOutputPinValue(outPin, Light::low);
+      outPinState = Light::low;
+      justToggled = true;
+    } else {
+      /* do nothing here */
+    }
+  }
 }
 
 void Light::toggle() {
-  if (outPinState == Light::low) {
-    outPinState = Light::high;
-    Platform.setOutputPinValue(outPin, Light::high);
-    if (type == DIGITOUT_TIMER) {
-      timeRun(&onTimer);
+  if (type == DIGITOUT_SIMPLE_HEAT) {
+    inPinState = Settings::getInputPinValue(inPin);
+    if (inPinState == HIGH) {
+      Platform.setOutputPinValue(outPin, Light::high);
+    } else if (inPinState == LOW) {
+      Platform.setOutputPinValue(outPin, Light::low);
+    } else {
+      Serial.println(F("This should never happen"));
     }
   } else {
-    outPinState = Light::low;
-    Platform.setOutputPinValue(outPin, Light::low);
+    if (outPinState == Light::low) {
+      outPinState = Light::high;
+      Platform.setOutputPinValue(outPin, Light::high);
+      if (type == DIGITOUT_TIMER) {
+        timeRun(&onTimer);
+      }
+    } else {
+      outPinState = Light::low;
+      Platform.setOutputPinValue(outPin, Light::low);
+    }
+    justToggled = true;
   }
-  justToggled = true;
 }
 
 bool Light::justTurnedON() {
@@ -214,6 +265,28 @@ void Light::setInputTypeHold() {
 
 void Light::setInputTypeRelease() {
   inputType = DIGITOUT_SWITCH_PRESS_RELEASE;
+}
+
+void Light::setInputTypeSimpleHeatOverrideOn() {
+  inputType = DIGITOUT_SWITCH_HEAT_OVERRIDE_ON;
+}
+
+void Light::setInputTypeSimpleHeatOverrideOff() {
+  inputType = DIGITOUT_SWITCH_HEAT_OVERRIDE_OFF;
+
+  /* setting the output pin state based on the input pin state */
+  inPinState = Settings::getInputPinValue(inPin);
+    if (inPinState == HIGH) {
+      Platform.setOutputPinValue(outPin, Light::high);
+    } else if (inPinState == LOW) {
+      Platform.setOutputPinValue(outPin, Light::low);
+    } else {
+      Serial.println("This should never happen");
+    }
+}
+
+void Light::setInputTypeSimpleHeatTempSensor() {
+  inputType = DIGITOUT_SWITCH_HEAT_TEMP_SENSOR;
 }
 
 byte Light::getInputType() {
