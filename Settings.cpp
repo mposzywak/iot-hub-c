@@ -11,6 +11,10 @@
 
 #include <Controllino.h>
 
+#elif defined(CONTROLLINO_MAXI_AUTOMATION)
+
+#include <Controllino.h>
+
 #elif defined(ARDUINO_AVR_MEGA2560)
 /* nothing needed here */
 
@@ -121,6 +125,35 @@
 
     /* the lightID array (numbers must be consecutive) */
     static byte Settings::lightIDs[LIGHTS] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+
+    /* 1-wire pin number */
+    static byte Settings::oneWirePin = 20;
+
+#elif defined(CONTROLLINO_MAXI_AUTOMATION) 
+    static byte Settings::digitIN[IN_PINS] =   { CONTROLLINO_A0, 
+                                                 CONTROLLINO_A1, 
+                                                 CONTROLLINO_A2,
+                                                 CONTROLLINO_A3,
+                                                 CONTROLLINO_A4,
+                                                 CONTROLLINO_A5,
+                                                 CONTROLLINO_A6,
+                                                 CONTROLLINO_A7 };
+
+    /* The output pin array */
+    static byte Settings::digitOUT[OUT_PINS] = { CONTROLLINO_D0, 
+                                                 CONTROLLINO_D1,
+                                                 CONTROLLINO_D2,
+                                                 CONTROLLINO_D3,
+                                                 CONTROLLINO_D4,
+                                                 CONTROLLINO_D5,
+                                                 CONTROLLINO_D6,
+                                                 CONTROLLINO_D7 };
+
+    /* the shadeID array (numbers must be consecutive) */
+    static byte Settings::shadeIDs[SHADES] = { 1, 2, 3, 4 };
+
+    /* the lightID array (numbers must be consecutive) */
+    static byte Settings::lightIDs[LIGHTS] = { 1, 2, 3, 4, 5, 6, 7, 8 };
 
     /* 1-wire pin number */
     static byte Settings::oneWirePin = 20;
@@ -248,6 +281,8 @@ static void Settings::setInPinMode(uint8_t pin) {
   pinMode(pin, INPUT);
 #elif defined(CONTROLLINO_MAXI)
   pinMode(pin, INPUT);
+#elif defined(CONTROLLINO_MAXI_AUTOMATION)
+  pinMode(pin, INPUT);
 #elif defined(ARDUINO_AVR_MEGA2560)
   pinMode(pin, INPUT_PULLUP);
 #endif
@@ -257,6 +292,8 @@ static int Settings::getInputPinValue(uint8_t pin) {
 #if defined(CONTROLLINO_MEGA)
   return digitalRead(pin);
 #elif defined(CONTROLLINO_MAXI)
+  return digitalRead(pin);
+#elif defined(CONTROLLINO_MAXI_AUTOMATION)
   return digitalRead(pin);
 #elif defined(ARDUINO_AVR_MEGA2560)
   int pinValue;
@@ -274,6 +311,8 @@ static void Settings::setOutputPinValue(uint8_t pin, uint8_t value) {
   digitalWrite(pin, value);
 #elif defined(CONTROLLINO_MAXI)
   digitalWrite(pin, value);
+#elif defined(CONTROLLINO_MAXI_AUTOMATION)
+  digitalWrite(pin, value);
 #elif defined(ARDUINO_AVR_MEGA2560)
   if (value == HIGH) {
     digitalWrite(pin, LOW);
@@ -288,6 +327,8 @@ static void Settings::initPlatform() {
   Controllino_RTC_init(0);
   //Controllino_SetTimeDate(7,4,11,19,11,00,45);
 #elif defined(CONTROLLINO_MAXI) 
+  Controllino_RTC_init(0);
+#elif defined(CONTROLLINO_MAXI_AUTOMATION)
   Controllino_RTC_init(0);
 #elif defined(ARDUINO_AVR_MEGA2560)
   /* nothing needed here */
@@ -317,21 +358,13 @@ static void Settings::EEPROMDeregister() {
 }
 
 static void Settings::EEPROMSetRaspyIP(IPAddress addr) {
-  Serial.print("Writing IP address: ");
-  Serial.println(addr);
   EEPROM.put(EEPROM_IDX_RASPYIP, addr);
 }
 
 static void Settings::EEPROMRegister(byte ardID, byte raspyID, IPAddress addr) {
-  Serial.print("Writing IP address: ");
-  Serial.println(addr[0]);
-  Serial.println(addr[1]);
-  Serial.println(addr[2]);
-  Serial.println(addr[3]);
   EEPROM.write(EEPROM_IDX_REG, (byte) true);
   EEPROM.write(EEPROM_IDX_ARDID, ardID);
   EEPROM.write(EEPROM_IDX_RASPYID, raspyID);
-  //EEPROM.put(EEPROM_IDX_RASPYIP, addr);
   EEPROM.write(EEPROM_IDX_RASPYIP, addr[0]);
   EEPROM.write(EEPROM_IDX_RASPYIP + 1, addr[1]);
   EEPROM.write(EEPROM_IDX_RASPYIP + 2, addr[2]);
@@ -344,7 +377,7 @@ static byte Settings::EEPROMGetMode() {
   if (mode != MODE_LIGHTS && mode != MODE_SHADES) {
     mode = MODE_LIGHTS;
     EEPROM.write(EEPROM_IDX_MODE, mode);
-    Serial.print("Wrong value set as MODE value in EEPROM");
+    Serial.print(F("Wrong value set as MODE value in EEPROM"));
   }
   return mode;
 }
@@ -357,21 +390,35 @@ static void Settings::EEPROMSetMode(byte mode) {
    EEPROM storage of individual configuration of devices to work properly */
 
 /* The following scheme shows how the data is stored:
- *  xx xx xxxxxxxx
- *  |  |  |__________The timer value in miliseconds: (unsigned long)
- *  |  |_______ The type of light device: (byte)
- *  |____ The ON/OFF status of the light device: (byte) 
+ *  xx xx xx xxxxxxxx xx
+ *  |  |  |  |        |__ The ctrlON setting of the light (if it is subject to global ctrlON cmd) (byte)
+ *  |  |  |  |____ The timer value in miliseconds: (unsigned long)
+ *  |  |  |_______ The sub-type of light device: lightType (byte)
+ *  |  |__________ The ON/OFF status of the light device: lightInputType (byte) 
+ *  |_____________ Status of the light (wether it is on or off)
  */
+
+static void Settings::EEPROMSetLightCtrlON(byte devID, byte value) {
+  int index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1)); /* start address for Light data structure */
+  EEPROM.write(index + 7, value);
+}
+
+static byte Settings::EEPROMGetLightCtrlON(byte devID) {
+  int index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1)); /* start address for Light data structure */
+  byte ctrlON;
+  ctrlON = EEPROM.read(index + 7);
+  return ctrlON;
+}
 
 static void Settings::EEPROMSetLightConfig(byte devID, byte type, unsigned long timer) {
   if (devID > LIGHTS) return;
-  byte index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1)); /* start address for Light data structure */
+  int index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1)); /* start address for Light data structure */
   EEPROM.write(index + 1, type);
   EEPROMWritelong(index + 2, timer);
 }
 
 static byte Settings::EEPROMGetLightType(byte devID) {
-  byte index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1)); /* start address for Light data structure */
+  int index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1)); /* start address for Light data structure */
   byte type;
   type = EEPROM.read(index + 1);
   return type;
@@ -379,12 +426,12 @@ static byte Settings::EEPROMGetLightType(byte devID) {
 
 static void Settings::EEPROMSetLightType(byte devID, byte type) {
   if (devID > LIGHTS) return;
-  byte index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1)); /* start address for Light data structure */
+  int index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1)); /* start address for Light data structure */
   EEPROM.write(index + 1, type);
 }
 
 static unsigned long Settings::EEPROMGetLightTimer(byte devID) {
-  byte index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1)); /* start address for Light data structure */
+  int index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1)); /* start address for Light data structure */
   unsigned long timer;
   timer = EEPROMReadlong(index + 2);
   return timer;
@@ -392,19 +439,19 @@ static unsigned long Settings::EEPROMGetLightTimer(byte devID) {
 
 static void Settings::EEPROMSetLightTimer(byte devID, unsigned long timer) {
   if (devID > LIGHTS) return;
-  byte index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1)); /* start address for Light data structure */
+  int index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1)); /* start address for Light data structure */
   EEPROMWritelong(index + 2, timer);
 }
 
 static void Settings::EEPROMSetLightStatus(byte devID, byte status) {
   if (devID > LIGHTS) return;
-  byte index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1)); /* start address for Light data structure */
+  int index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1)); /* start address for Light data structure */
   EEPROM.write(index, status);
 }
 
 static byte Settings::EEPROMGetLightInputType(byte devID) {
   if (devID > LIGHTS) return;
-  byte index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1));
+  int index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1));
   byte inputType;
   inputType = EEPROM.read(index + 6);
   return inputType;
@@ -412,7 +459,7 @@ static byte Settings::EEPROMGetLightInputType(byte devID) {
 
 static void Settings::EEPROMSetLightInputType(byte devID, byte inputType) {
   if (devID > LIGHTS) return;
-  byte index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1));
+  int index = EEPROM_IDX_LIGHTS + (EEPROM_IDX_LIGHTS_LENGTH * (devID - 1));
   EEPROM.write(index + 6, inputType);
 }
 
@@ -480,47 +527,105 @@ static byte Settings::EEPROMGetLightCentral() {
 
 static void Settings::EEPROMSetShadeType(byte devID, byte type) {
   if (devID > SHADES) return;
-  byte index = EEPROM_IDX_SHADES + (7 * (devID - 1));
+  int index = EEPROM_IDX_SHADES + (7 * (devID - 1));
   EEPROM.write(index + 4, type);
 }
 
 static void Settings::EEPROMSetShadeTiltTimer(byte devID, int timer) {
   if (devID > SHADES) return;
-  byte index = EEPROM_IDX_SHADES + (7 * (devID - 1));
+  int index = EEPROM_IDX_SHADES + (7 * (devID - 1));
   EEPROMWriteInt(index + 6, timer);
 }
 
 static void Settings::EEPROMSetShadePosTimer(byte devID, byte timer) {
   if (devID > SHADES) return;
-  byte index = EEPROM_IDX_SHADES + (7 * (devID - 1));
+  int index = EEPROM_IDX_SHADES + (7 * (devID - 1));
   EEPROM.write(index + 5, timer);
 }
 
 static byte Settings::EEPROMGetShadeType(byte devID) {
-  byte index = EEPROM_IDX_SHADES + (7 * (devID - 1));
+  int index = EEPROM_IDX_SHADES + (7 * (devID - 1));
   byte type;
   type = EEPROM.read(index + 4);
   return type;
 }
 
 static int Settings::EEPROMGetShadeTiltTimer(byte devID) {
-  byte index = EEPROM_IDX_SHADES + (7 * (devID - 1));
+  int index = EEPROM_IDX_SHADES + (7 * (devID - 1));
   int timer;
   timer = EEPROMReadInt(index + 6);
   return timer;
 }
 
 static byte Settings::EEPROMGetShadePosTimer(byte devID) {
-  byte index = EEPROM_IDX_SHADES + (7 * (devID - 1));
+  int index = EEPROM_IDX_SHADES + (7 * (devID - 1));
   byte timer;
   timer = EEPROM.read(index + 5);
   return timer;
+}
+
+static void Settings::EEPROMSetMAC(byte *mac) {
+  for (byte i = 0; i < 6; i++) {
+    EEPROM.write(EEPROM_IDX_MAC + i, mac[i]);
+  }
+}
+
+static void Settings::EEPROMGetMAC(byte *mac) {
+  for (byte i = 0; i < 6; i++) {
+    mac[i] = EEPROM.read(EEPROM_IDX_MAC + i);
+  }
+}
+
+static void Settings::EEPROMSetUseDefMAC(byte status) {
+  EEPROM.write(EEPROM_IDX_USE_DEF_MAC, status);
+}
+
+static byte Settings::EEPROMGetUseDefMAC() {
+  return EEPROM.read(EEPROM_IDX_USE_DEF_MAC);
+}
+
+static void Settings::EEPROMSetUID() {
+  EEPROMWritelong(EEPROM_IDX_UID, EEPROM_UID);
+}
+
+static bool Settings::EEPROMIsUIDSet() {
+  unsigned long uid;
+  uid = EEPROMReadlong(EEPROM_IDX_UID);
+  Serial.print("UID: ");
+  Serial.println(uid);
+  if (uid == EEPROM_UID) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+static void Settings::EEPROMRaze() {
+  uint16_t len;
+  len = EEPROM.length();
+  for (int i = 0; i < len; i++) {
+    if (i == EEPROM_IDX_ARDID) {
+      EEPROM.write(EEPROM_IDX_ARDID, 0);
+    } else if (i == EEPROM_IDX_REG) {
+      EEPROM.write(EEPROM_IDX_REG, (byte) false);
+    } else {
+      EEPROM.write(i, 255);
+    }
+  }
+}
+
+static bool Settings::EEPROMClearUID() {
+  unsigned long uid;
+  uid = 0;
+  EEPROMWritelong(EEPROM_IDX_UID, uid);
 }
 
 static byte Settings::SDCardInit() {
 #if defined(CONTROLLINO_MEGA)
   /* no support on Controllino for SD Card */
 #elif defined(CONTROLLINO_MAXI) 
+  /* no support on Controllino for SD Card */
+#elif defined(CONTROLLINO_MAXI_AUTOMATION)
   /* no support on Controllino for SD Card */
 #elif defined(ARDUINO_AVR_MEGA2560)
   pinMode(SD_ARD_MEGA_CS, OUTPUT);     /* set the Select pin */
