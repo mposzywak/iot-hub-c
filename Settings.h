@@ -8,23 +8,29 @@
 #ifndef SETTINGS_H_
 #define SETTINGS_H_
 
+/* version of the current code */
+#define VERSION "BarnGA-0.4"
+
 #if defined(CONTROLLINO_MEGA)
 #include <Controllino.h>
 #define IN_PINS  21
 #define OUT_PINS 21
 #define SHADES   10
 #define LIGHTS   21
+#define ONE_WIRE_PIN 20
 #elif defined(CONTROLLINO_MAXI)
 #include <Controllino.h>
 #define IN_PINS  12
 #define OUT_PINS 12
 #define SHADES   6
 #define LIGHTS   12
+#define ONE_WIRE_PIN 20
 #elif defined(ARDUINO_AVR_MEGA2560)
 #define IN_PINS  28
 #define OUT_PINS 28
 #define SHADES   14
 #define LIGHTS   28
+#define ONE_WIRE_PIN 2
 #endif
 
 /* types of physical button press */
@@ -34,23 +40,31 @@
 #define PHY_CENTRAL_CTRL_MOMENTARY_PRESS      13
 #define PHY_CENTRAL_CTRL_PRESS_MORE_THAN_2SEC 14
 
-/* indexes for EEPROM information holding */
+/* indexes for EEPROM information holding (max size available 4096) */
 #define EEPROM_IDX_ARDID    0  // length 1
 #define EEPROM_IDX_RASPYID  1  // length 1
 #define EEPROM_IDX_REG      2  // length 1
 #define EEPROM_IDX_RASPYIP  3  // length 6
 #define EEPROM_IDX_MODE     9  // length 1
-#define EEPROM_IDX_LIGHTS   10 // length 240 -> 30 (lights) x 7 (1 status + 1 type + 4 timer + 1 input)  + 30 (buffer for future use)
-#define EEPROM_IDX_CENT_CTRL 250 // length
-#define EEPROM_IDX_SHADES   251 // length 150 -> 15 (shades) x 8 (4 status + 1 type + 1 pos timer + 2 tilt timer) + 30 (buffer for future use)
+#define EEPROM_IDX_CENT_CTRL 10 // length 1
+#define EEPROM_IDX_UID      11 // length 4
+#define EEPROM_IDX_MAC      50 // length 6
+#define EEPROM_IDX_USE_DEF_MAC 17 // length 1
+#define EEPROM_IDX_LIGHTS   512 // length 240 -> 30 (lights) x 7 (1 status + 1 type + 4 timer + 1 input + 1 ctrlON)  + 30 (buffer for future use)
+#define EEPROM_IDX_SHADES    2048 // length 150 -> 15 (shades) x 8 (4 status + 1 type + 1 pos timer + 2 tilt timer) + 30 (buffer for future use)
 
 /* length (in bytes) of the lights and shades fields */
-#define EEPROM_IDX_LIGHTS_LENGTH  7
+#define EEPROM_IDX_LIGHTS_LENGTH  8
 #define EEPROM_IDX_SHADES_LENGTH  8
 
 /* flags */
 #define EEPROM_FLG_SHADE_SYNC     1
 #define EEPROM_FLG_SHADE_INMOTION 2
+#define EEPROM_FLG_DEF_MAC        1 /* default MAC address is used */ 
+#define EEPROM_FLG_MEM_MAC        2 /* MAC address from memory is used */
+
+/* UID */
+#define EEPROM_UID 1283279103
 
 /* functional modes of the entire device */
 #define MODE_LIGHTS 0
@@ -79,6 +93,8 @@ class Settings {
     /* The output pin array */
     static byte digitOUT[OUT_PINS];
 
+    static byte oneWirePin;
+
     /* read a long value from EEPROM's given address */
     static unsigned long EEPROMReadlong(unsigned long address);
 
@@ -90,6 +106,7 @@ class Settings {
 
     /* write an int vlaue into EEPROM at a given address */
     static void Settings::EEPROMWriteInt(int address, int value);
+
 
   public:
 
@@ -169,6 +186,12 @@ class Settings {
     /* Get from the EEPROM System mode */
     static byte Settings::EEPROMGetMode();
 
+    /* set individual light subject to global ctrlON command */
+    static void Settings::EEPROMSetLightCtrlON(byte devID, byte value);
+
+    /* get individual light setting whether it is subject to global ctrlON command */
+    static byte Settings::EEPROMGetLightCtrlON(byte devID);
+
     /* Write individual Light settings in the EEPROM */
     static void EEPROMSetLightConfig(byte devID, byte type, unsigned long timer);
 
@@ -220,6 +243,30 @@ class Settings {
     /* Read Shade position timer from memory */
     static byte EEPROMGetShadePosTimer(byte devID);
 
+    /* save MAC address to memory */
+    static void EEPROMSetMAC(byte *mac);
+
+    /* Get MAC address from memory*/
+    static void EEPROMGetMAC(byte *mac);
+
+    /* set status if default MAC should be used or from memory */
+    static void EEPROMSetUseDefMAC(byte status);
+
+    /* get status if default MAC should be used or from memory */
+    static byte EEPROMGetUseDefMAC();
+
+    /* Put UID into EEPROM */
+    static void EEPROMSetUID();
+
+    /* check if UID is in the EEPROM */
+    static bool EEPROMIsUIDSet();
+
+    /* clear the UID from the EEPROM */
+    static bool EEPROMClearUID();
+
+    /* clear EEPROM to factory defaults */
+    static void EEPROMRaze();
+
     /*
      * SD Card related functions
      */
@@ -232,6 +279,12 @@ class Settings {
 
     /* Close the file */
     static void SDCardFileClose(File file);
+
+    /*
+     * 1-wire related functions:
+     */
+
+    static byte getOneWirePin();
 };
 
 extern Settings Platform;
