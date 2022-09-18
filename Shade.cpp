@@ -11,7 +11,7 @@ Shade::Shade() {
   //init();
 }
 
-void Shade::init(byte shadeID) {
+void Shade::init(byte shadeID, bool sync, int tilt, int pos, byte reachedPos, int positionTimer, int tiltTimer) {
   this->shadeID = shadeID;
   this->outPinUp = Settings::getShadeOutPinUp(shadeID);
   this->outPinDown = Settings::getShadeOutPinDown(shadeID);
@@ -24,6 +24,8 @@ void Shade::init(byte shadeID) {
   inPinUpPressed    = false;
   inPinDownPressed  = false;
 
+  userPressed = false;
+
   pinMode(outPinUp, OUTPUT);
   pinMode(outPinDown, OUTPUT);
 
@@ -35,10 +37,10 @@ void Shade::init(byte shadeID) {
   outPinUpState = Shade::low;
   outPinDownState = Shade::low;
 
-  position = 0;
-  desiredPosition = 0;
-  movementRange = SHADE_DEFAULT_POSITION_TIMER * 10;
-  synced = false;
+  position = pos;
+  desiredPosition = pos;
+  movementRange = positionTimer * 10;
+  synced = sync;
   justStoppedVar = false;
   justStoppedTiltVar = false;
 
@@ -49,13 +51,15 @@ void Shade::init(byte shadeID) {
     sections[i] = movementRange / DEFAULT_PARTS * i;
   }
 
+  /* set the reachedPosition according to the position provided in the arg */
+  reachedPosition = reachedPos;
+
   positionReported = false;
-  unsyncReported = false;
 
   /* filling in the section borders with the border miliseconds of the tilt movement range */
-  tiltRange = SHADE_DEFAULT_TILT_TIMER;
-  tiltSections[0] = SHADE_DEFAULT_TILT_TIMER;
-  tiltSections[1] = SHADE_DEFAULT_TILT_TIMER / 2;
+  tiltRange = tiltTimer;
+  tiltSections[0] = tiltTimer;
+  tiltSections[1] = tiltTimer / 2;
   tiltSections[2] = 0;
 
   dir_swap = { 0, DIRECTION_SWITCH_WAIT_TIME, true }; /* The 300ms timer to wait before changing direction up/down */
@@ -66,7 +70,7 @@ void Shade::init(byte shadeID) {
   upButtonHold = { 0, BUTTON_HOLD_TIME, true };
   downButtonHold = { 0, BUTTON_HOLD_TIME, true };
 
-  desiredTilt = TILT_H_CLOSED;
+  desiredTilt = tilt;
   tiltMovement = false;
 
   secDesiredTilt = TILT_NONE;
@@ -171,6 +175,7 @@ byte Shade::update() {
         positionReported = false;
       } else if (movingUp && position == 0) {
         synced = true;
+        justSyncedVar = true;
         this->stop();
         tiltStop(); /* this is just to report the state of the tilt if up move is used to sync the shade */
       }
@@ -179,6 +184,7 @@ byte Shade::update() {
         positionReported = false;
       } else if (movingDown && position == movementRange) {
         synced = true;
+        justSyncedVar = true;
         this->stop();
         setTiltFromDown(); /* this is to report the state of the shade once synced */
       }
@@ -230,8 +236,8 @@ byte Shade::update() {
     }
     /* CODE EXECUTED EVERY SECOND - END */
   } else {
-    return 255; /* this is needed for the update function to return something meaningful if it
-    runs second and more times during a second. Apparently if there is no return value statement
+    return 255; /* this is needed for the update function to return something meaningful. 
+    Apparently if there is no return value statement
     specified in the function code path, it gets randomized. That in our case here caused unpredictable
     results */
   }
@@ -425,13 +431,16 @@ byte Shade::getDevID() {
 }
 
 bool Shade::isSynced() {
-  /*if (!unsyncReported) {
-    unsyncReported = true;
-    return synced;
-  } else {
-    return true;
-  }*/
   return synced;
+}
+
+bool Shade::justSynced() {
+  if (justSyncedVar) {
+    justSyncedVar = false;
+    return true;
+  } else {
+    return false;
+  }
 }
 
 bool Shade::timeCheck(struct t *t ) {
@@ -445,6 +454,10 @@ bool Shade::timeCheck(struct t *t ) {
 
 byte Shade::getTilt() {
   return desiredTilt;
+}
+
+int Shade::getPosition() {
+  return position;
 }
 
 void Shade::timeRun(struct t *t) {
@@ -472,29 +485,35 @@ void Shade::setTilt(byte tilt) {
     if (oldTilt == TILT_F_CLOSED && desiredTilt == TILT_F_CLOSED) {
       /* nothing */
     } else if (oldTilt == TILT_F_CLOSED && desiredTilt == TILT_H_CLOSED) {
-      tiltRun.tTimeout = TILT_HALF_MOVE;
+      //tiltRun.tTimeout = TILT_HALF_MOVE;
+      tiltRun.tTimeout = tiltSections[1];
       tiltDirection = false;
       timeRun(&waitBeforeTilt);
     } else if (oldTilt == TILT_F_CLOSED && desiredTilt == TILT_F_OPEN) {
-      tiltRun.tTimeout = TILT_FULL_MOVE;
+      //tiltRun.tTimeout = TILT_FULL_MOVE;
+      tiltRun.tTimeout = tiltSections[0];
       tiltDirection = false;
       timeRun(&waitBeforeTilt);
     } else if (oldTilt == TILT_H_CLOSED && desiredTilt == TILT_F_CLOSED) {
-      tiltRun.tTimeout = TILT_HALF_MOVE;
+      //tiltRun.tTimeout = TILT_HALF_MOVE;
+      tiltRun.tTimeout = tiltSections[1];
       tiltDirection = true;
       timeRun(&waitBeforeTilt);
     } else if (oldTilt == TILT_H_CLOSED && desiredTilt == TILT_H_CLOSED) {
       /* nothing */
     } else if (oldTilt == TILT_H_CLOSED && desiredTilt == TILT_F_OPEN) {
-      tiltRun.tTimeout = TILT_HALF_MOVE;
+      //tiltRun.tTimeout = TILT_HALF_MOVE;
+      tiltRun.tTimeout = tiltSections[1];
       tiltDirection = false;
       timeRun(&waitBeforeTilt);
     } else if (oldTilt == TILT_F_OPEN && desiredTilt == TILT_F_CLOSED) {
-      tiltRun.tTimeout = TILT_FULL_MOVE;
+      //tiltRun.tTimeout = TILT_FULL_MOVE;
+      tiltRun.tTimeout = tiltSections[0];
       tiltDirection = true;
       timeRun(&waitBeforeTilt);
     } else if (oldTilt == TILT_F_OPEN && desiredTilt == TILT_H_CLOSED) {
-      tiltRun.tTimeout = TILT_HALF_MOVE;
+      //tiltRun.tTimeout = TILT_HALF_MOVE;
+      tiltRun.tTimeout = tiltSections[1];
       tiltDirection = true;
       timeRun(&waitBeforeTilt);
     } else if (oldTilt == TILT_F_OPEN && desiredTilt == TILT_F_OPEN) {
@@ -574,10 +593,9 @@ void Shade::setPositionTimer(int timer) {
   
   tiltMovement = false;
   desiredTilt = TILT_H_CLOSED;
-  unsyncReported = false;
-  Serial.print("movementRange of devID: ");
+  Serial.print(F("movementRange of devID: "));
   Serial.print(shadeID);
-  Serial.print(" is: ");
+  Serial.print(F(" is: "));
   Serial.println(movementRange);
 }
 
@@ -590,7 +608,26 @@ void Shade::setTiltTimer(int timer) {
 
   tiltMovement = false;
   desiredTilt = TILT_H_CLOSED;
-  unsyncReported = false;
+}
+
+int Shade::getTiltTimer() {
+  return tiltRange;
+}
+
+int Shade::getPositionTimer() {
+  return movementRange / 10;
+}
+
+void Shade::setUserPressed() {
+  userPressed = true;
+}
+
+void Shade::clearUserPressed() {
+  userPressed = false;
+}
+
+bool Shade::getUserPressed() {
+  return userPressed;
 }
 
 static byte Shade::validatePositionTimer(byte timer) {

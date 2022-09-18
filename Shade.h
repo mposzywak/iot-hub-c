@@ -21,12 +21,12 @@
 #define TILT_FULL_MOVE 1100
 #define TILT_HALF_MOVE 550
 
-/*  */
+/* direction of the move  */
 #define DIRECTION_DOWN 0
 #define DIRECTION_UP   1
 
 /* timer value ranges */
-#define SHADE_POSITION_TIMER_MIN  1
+#define SHADE_POSITION_TIMER_MIN  10
 #define SHADE_POSITION_TIMER_MAX  255
 #define SHADE_TILT_TIMER_MIN      100
 #define SHADE_TILT_TIMER_MAX      30000
@@ -35,7 +35,7 @@
 #define DIRECTION_SWITCH_WAIT_TIME 300
 
 /* amount of time a button needs to be held in order to enable action on press-hold event */
-#define BUTTON_HOLD_TIME 1000
+#define BUTTON_HOLD_TIME 700
 
 /*
  * Class for handling of the Shades. Each object represents one shade composed of 4 pins (2 inputs for both directions and 2 outputs for both directions)
@@ -57,7 +57,7 @@ class Shade {
     byte inPinUp;
     byte inPinDown;
 
-    /* variable holding the current position of the shade (in seconds) */
+    /* variable holding the current position of the shade (in 100s of ms) */
     int position;
 
     /* variable indicating the desired position. This is used to control the movement of the shade */
@@ -70,7 +70,7 @@ class Shade {
     int movementRange;
 
     /* this is the tilt value of the current shade. It is configurable. */
-    byte tiltRange;
+    int tiltRange;
 
     /* variable indicating the desired tilt. This is used to control the shade tilt */
     byte desiredTilt;
@@ -79,6 +79,9 @@ class Shade {
     byte secDesiredTilt;
 
     int tiltSections[3];
+
+    /* indication if the recent action on the shade was triggered by a physical switch */
+    bool userPressed;
 
     /* variables holding states of input and output pins */
     byte outPinUpState;
@@ -96,6 +99,9 @@ class Shade {
     bool justStartedDownVar;
     bool justStoppedTiltVar;
 
+    /* contains the flag if the information about Shade being unsync has been already reported */
+    bool justSyncedVar;
+
     byte oldSec;
 
     int sections[6];
@@ -108,9 +114,6 @@ class Shade {
 
     /* the secondary position value. Used to store temporary desired position value before movement can be started */
     int secPosition;
-
-    /* contains the flag if the information about Shade being unsync has been already reported */
-    bool unsyncReported;
 
     /* contains information into which direction should be enabled after the programmed delay on swapping direction
      *  true  - UP
@@ -168,7 +171,7 @@ class Shade {
   /*
    * Initialization function for the constructor
    */
-  void init(byte shadeID);
+  void init(byte shadeID, bool sync, int tilt, int pos, byte reachedPos, int positionTimer, int tiltTimer);
 
   /* returns true if the "up" button is pressed */
   byte isUpPressed();
@@ -207,11 +210,16 @@ class Shade {
   bool justStartedDown();
   bool justStoppedTilt();
 
+  bool justSynced();
+
   /* sets the desired position of the shade to a given value */
   void toPosition(byte position);
 
-  /* get current position */
+  /* get current position (in percentage) */
   byte getCurrentPosition();
+
+  /* get current position (in 100s of miliseconds) */
+  int Shade::getPosition();
 
   /* return the tilt value */
   byte getTilt();
@@ -234,13 +242,20 @@ class Shade {
   /* reset the light device - this function supposed to be executed only when the mode is changed from shades to something else */
   void Shade::reset();
 
-  /* set shade Position timer - setting the position timer will also reset the shade i. e. place it into the unsync state
+  /* set/get shade Position timer - setting the position timer will also reset the shade i. e. place it into the unsync state
      timer value is in seconds */
   void Shade::setPositionTimer(int timer);
+  int Shade::getPositionTimer();
 
-  /* set shade Tilt timer - setting the tilt timer will also reset the shade i. e. place it into the unsync state  
+  /* set/get shade Tilt timer - setting the tilt timer will also reset the shade i. e. place it into the unsync state  
      timer value is in miliseconds */
   void Shade::setTiltTimer(int timer);
+  int Shade::getTiltTimer();
+
+  /* control the userPressed state */
+  void Shade::setUserPressed();
+  void Shade::clearUserPressed();
+  bool Shade::getUserPressed();
 
   /* validation of Position Timer, if argument is not within range, returns default timer value */
   static byte Shade::validatePositionTimer(byte timer);
