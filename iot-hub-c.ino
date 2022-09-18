@@ -306,8 +306,12 @@ void loop() {
         WebGUI.shadeSetPosition(devID, shades[i].getCurrentPosition());
         Platform.EEPROMSetShadePosition(devID, shades[i].getPosition());
         Platform.EEPROMSetShadeReachedPosition(devID, shades[i].getCurrentPosition());
+        if (shades[i].isSynced()) {
+          Platform.EEPROMSetShadeSyncFlag(devID);
+        }
       }
       if (shades[i].justStartedDown()) { /* executed on shade started moving down */
+        Platform.EEPROMClearShadeSyncFlag(Settings::shadeIDs[i]);
         if (shades[i].getUserPressed()) {
           ARiF.sendUserShadeDown(Settings::shadeIDs[i]);
           shades[i].clearUserPressed();
@@ -317,6 +321,7 @@ void loop() {
         WebGUI.shadeSetDirection(devID, S_WEBGUI_DOWN);
       }
       if (shades[i].justStartedUp()) { /* executed on shade started moving up */
+        Platform.EEPROMClearShadeSyncFlag(Settings::shadeIDs[i]);
         if (shades[i].getUserPressed()) {
           ARiF.sendUserShadeUp(Settings::shadeIDs[i]);
           shades[i].clearUserPressed();
