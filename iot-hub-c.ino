@@ -21,6 +21,7 @@
   RELEASE NOTES:
 
   BarnGA-0.5 (or 1.2.1)
+    - Added Controllino build-in relay support
     - fixed the tilt and position timers support by ARiF
     - Added Shade state stored in EEPROM
     - Added "User" indication to shades triggered by physical switch

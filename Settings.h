@@ -9,21 +9,21 @@
 #define SETTINGS_H_
 
 /* version of the current code */
-#define VERSION "1.2.1"
+#define VERSION "1.2.1-beta"
 
 #if defined(CONTROLLINO_MEGA)
 #include <Controllino.h>
-#define IN_PINS  21
-#define OUT_PINS 21
+#define IN_PINS  37
+#define OUT_PINS 37
 #define SHADES   10
-#define LIGHTS   21
+#define LIGHTS   37
 #define ONE_WIRE_PIN 20
 #elif defined(CONTROLLINO_MAXI)
 #include <Controllino.h>
-#define IN_PINS  12
-#define OUT_PINS 12
+#define IN_PINS  22
+#define OUT_PINS 22
 #define SHADES   6
-#define LIGHTS   12
+#define LIGHTS   22
 #define ONE_WIRE_PIN 20
 #elif defined(ARDUINO_AVR_MEGA2560)
 #define IN_PINS  28
@@ -32,6 +32,9 @@
 #define LIGHTS   28
 #define ONE_WIRE_PIN 2
 #endif
+
+/* dummy controllino input pin */
+#define CONTROLLINO_DUMMY_PIN 255
 
 /* types of physical button press */
 #define PHY_NO_PRESS                          10

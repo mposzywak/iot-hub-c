@@ -46,7 +46,23 @@
                                                  CONTROLLINO_I17,
                                                  CONTROLLINO_I18,
                                                  CONTROLLINO_IN0,
-                                                 CONTROLLINO_IN1 };
+                                                 CONTROLLINO_IN1,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN };
 
     /* The output pin array */
     static byte Settings::digitOUT[OUT_PINS] = { CONTROLLINO_D0, 
@@ -69,7 +85,23 @@
                                                  CONTROLLINO_D17,
                                                  CONTROLLINO_D18,
                                                  CONTROLLINO_D19,
-                                                 CONTROLLINO_D20 };
+                                                 CONTROLLINO_D20,
+                                                 CONTROLLINO_R0,
+                                                 CONTROLLINO_R1,
+                                                 CONTROLLINO_R2,
+                                                 CONTROLLINO_R3,
+                                                 CONTROLLINO_R4,
+                                                 CONTROLLINO_R5,
+                                                 CONTROLLINO_R6,
+                                                 CONTROLLINO_R7,
+                                                 CONTROLLINO_R8,
+                                                 CONTROLLINO_R9,
+                                                 CONTROLLINO_R10,
+                                                 CONTROLLINO_R11,
+                                                 CONTROLLINO_R12,
+                                                 CONTROLLINO_R13,
+                                                 CONTROLLINO_R14,
+                                                 CONTROLLINO_R15 };
 
     /* The input pin devID array */
     //static byte Settings::digitINdevID[IN_PINS] = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30 };
@@ -81,14 +113,14 @@
     static byte Settings::shadeIDs[SHADES] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 
     /* the lightID array (numbers must be consecutive) */
-    static byte Settings::lightIDs[LIGHTS] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 };
+    static byte Settings::lightIDs[LIGHTS] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37};
 
     /* 1-wire pin number */
     static byte Settings::oneWirePin = 20;
 
 #elif defined(CONTROLLINO_MAXI) 
-    static byte Settings::digitIN[IN_PINS] =   { CONTROLLINO_A0, 
-                                                 CONTROLLINO_A1, 
+    static byte Settings::digitIN[IN_PINS] =   { CONTROLLINO_A0,
+                                                 CONTROLLINO_A1,
                                                  CONTROLLINO_A2,
                                                  CONTROLLINO_A3,
                                                  CONTROLLINO_A4,
@@ -98,7 +130,17 @@
                                                  CONTROLLINO_A8,
                                                  CONTROLLINO_A9,
                                                  CONTROLLINO_IN0,
-                                                 CONTROLLINO_IN1 };
+                                                 CONTROLLINO_IN1,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN };
 
     /* The output pin array */
     static byte Settings::digitOUT[OUT_PINS] = { CONTROLLINO_D0, 
@@ -112,19 +154,23 @@
                                                  CONTROLLINO_D8,
                                                  CONTROLLINO_D9,
                                                  CONTROLLINO_D10,
-                                                 CONTROLLINO_D11 };
-                            
-    /* The input pin devID array */
-    //static byte Settings::digitINdevID[IN_PINS] = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 };
-
-    /* the output pin devID array */
-    //static byte Settings::digitOUTdevID[OUT_PINS] = { 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61 };
+                                                 CONTROLLINO_D11,
+                                                 CONTROLLINO_R0,
+                                                 CONTROLLINO_R1,
+                                                 CONTROLLINO_R2,
+                                                 CONTROLLINO_R3,
+                                                 CONTROLLINO_R4,
+                                                 CONTROLLINO_R5,
+                                                 CONTROLLINO_R6,
+                                                 CONTROLLINO_R7,
+                                                 CONTROLLINO_R8,
+                                                 CONTROLLINO_R9 };
 
     /* the shadeID array (numbers must be consecutive) */
     static byte Settings::shadeIDs[SHADES] = { 1, 2, 3, 4, 5, 6 };
 
     /* the lightID array (numbers must be consecutive) */
-    static byte Settings::lightIDs[LIGHTS] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+    static byte Settings::lightIDs[LIGHTS] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 };
 
     /* 1-wire pin number */
     static byte Settings::oneWirePin = 20;
@@ -290,9 +336,17 @@ static void Settings::setInPinMode(uint8_t pin) {
 
 static int Settings::getInputPinValue(uint8_t pin) {
 #if defined(CONTROLLINO_MEGA)
-  return digitalRead(pin);
+  if (pin != CONTROLLINO_DUMMY_PIN) {
+    return digitalRead(pin);
+  } else {
+    return LOW;  
+  }
 #elif defined(CONTROLLINO_MAXI)
-  return digitalRead(pin);
+  if (pin != CONTROLLINO_DUMMY_PIN) {
+    return digitalRead(pin);
+  } else {
+    return LOW;  
+  }
 #elif defined(CONTROLLINO_MAXI_AUTOMATION)
   return digitalRead(pin);
 #elif defined(ARDUINO_AVR_MEGA2560)
