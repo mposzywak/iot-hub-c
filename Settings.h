@@ -9,21 +9,21 @@
 #define SETTINGS_H_
 
 /* version of the current code */
-#define VERSION "BarnGA-0.4"
+#define VERSION "1.2.1-beta"
 
 #if defined(CONTROLLINO_MEGA)
 #include <Controllino.h>
-#define IN_PINS  21
-#define OUT_PINS 21
+#define IN_PINS  37
+#define OUT_PINS 37
 #define SHADES   10
-#define LIGHTS   21
+#define LIGHTS   37
 #define ONE_WIRE_PIN 20
 #elif defined(CONTROLLINO_MAXI)
 #include <Controllino.h>
-#define IN_PINS  12
-#define OUT_PINS 12
+#define IN_PINS  22
+#define OUT_PINS 22
 #define SHADES   6
-#define LIGHTS   12
+#define LIGHTS   22
 #define ONE_WIRE_PIN 20
 #elif defined(ARDUINO_AVR_MEGA2560)
 #define IN_PINS  28
@@ -32,6 +32,9 @@
 #define LIGHTS   28
 #define ONE_WIRE_PIN 2
 #endif
+
+/* dummy controllino input pin */
+#define CONTROLLINO_DUMMY_PIN 255
 
 /* types of physical button press */
 #define PHY_NO_PRESS                          10
@@ -47,15 +50,15 @@
 #define EEPROM_IDX_RASPYIP  3  // length 6
 #define EEPROM_IDX_MODE     9  // length 1
 #define EEPROM_IDX_CENT_CTRL 10 // length 1
-#define EEPROM_IDX_UID      11 // length 4
-#define EEPROM_IDX_MAC      50 // length 6
+#define EEPROM_IDX_UID       11 // length 4
+#define EEPROM_IDX_MAC       50 // length 6
 #define EEPROM_IDX_USE_DEF_MAC 17 // length 1
-#define EEPROM_IDX_LIGHTS   512 // length 240 -> 30 (lights) x 7 (1 status + 1 type + 4 timer + 1 input + 1 ctrlON)  + 30 (buffer for future use)
-#define EEPROM_IDX_SHADES    2048 // length 150 -> 15 (shades) x 8 (4 status + 1 type + 1 pos timer + 2 tilt timer) + 30 (buffer for future use)
+#define EEPROM_IDX_LIGHTS    512 // length 240 -> 30 (lights) x 7 (1 status + 1 type + 4 timer + 1 input + 1 ctrlON)  + 30 (buffer for future use)
+#define EEPROM_IDX_SHADES    2048 // length 150 -> 15 (shades) x 9 (4 status + 1 flags + 1 type + 1 pos timer + 2 tilt timer) + 30 (buffer for future use)
 
 /* length (in bytes) of the lights and shades fields */
 #define EEPROM_IDX_LIGHTS_LENGTH  8
-#define EEPROM_IDX_SHADES_LENGTH  8
+#define EEPROM_IDX_SHADES_LENGTH  9
 
 /* flags */
 #define EEPROM_FLG_SHADE_SYNC     1
@@ -82,6 +85,22 @@
 #define SD_INIT_SUCCESS     1
 #define SD_INIT_NOFILE      2
 
+/* macros for setting the bits on/off */
+#define GET_BIT(x,bit)   ( ((x)>>(bit)) & 1 )    /* get   bit-th bit of x */
+#define SET_BIT(x,bit)   (  (x) |=  (1<<(bit)) ) /* set   bit-th bit of x */
+#define CLEAR_BIT(x,bit) (  (x) &= ~(1<<(bit)) ) /* clear bit-th bit of x */
+
+/* bit definitions */
+#define EEPROM_SHADE_BIT_
+
+/* defines how many seconds does it take to move the entire shade from closed to open or vice-versa */
+#define EEPROM_SHADE_DEFAULT_POSITION_TIMER 64
+
+/* default tilt range movement length in miliseconds */
+#define EEPROM_SHADE_DEFAULT_TILT_TIMER     1000
+
+/* default timer for timer type lights (in seconds) */
+#define EEPROM_DIGITOUT_DEFAULT_TIMER    30000
 
 
 class Settings {
@@ -224,6 +243,33 @@ class Settings {
 
     /* Read Central Control mode from the EEPROM */
     static byte EEPROMGetLightCentral();
+
+    /* Set shade unsync flag indicator */
+    static void EEPROMSetShadeSyncFlag(byte devID);
+
+    /* Clear shade unsync flag indicator */
+    static bool EEPROMGetShadeSyncFlag(byte devID);
+
+    /* Get shade unsync flag indicator */
+    static void EEPROMClearShadeSyncFlag(byte devID);
+
+    /* Get shade reported position */
+    static void EEPROMSetShadeReachedPosition(byte devID, byte reachedPosition);
+
+    /* Set shade reported position (0, 25, 50, 75, 100) */
+    static byte EEPROMGetShadeReachedPosition(byte devID);
+
+    /* Set shade position */
+    static void EEPROMSetShadePosition(byte devID, int position);
+
+    /* Get shade position */
+    static int EEPROMGetShadePosition(byte devID);
+
+    /* Set shade tilt */
+    static void EEPROMSetShadeTilt(byte devID, byte tilt);
+
+    /* Get shade tilt */
+    static byte EEPROMGetShadeTilt(byte devID);
 
     /* Write Shade type into memory */
     static void EEPROMSetShadeType(byte devID, byte type);

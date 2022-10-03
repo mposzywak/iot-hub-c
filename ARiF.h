@@ -85,10 +85,12 @@
 #define VAL_ON         1
 
 /* shade status dataType values */
-#define DT_DIRECTION 0
-#define DT_POSITION  1
-#define DT_TILT      2
-#define DT_SYNC      3
+#define DT_DIRECTION      0
+#define DT_POSITION       1
+#define DT_TILT           2
+#define DT_SYNC           3
+#define DT_DIRECTION_USER 4
+#define DT_TILT_USER      5
 
 /* define modes of operations */
 #define M_SHADES     1
@@ -298,18 +300,22 @@ class ARiFClass {
 
     /* send the shade moving UP indication towards the raspy */
     static void sendShadeUp(byte devID);
+    static void sendUserShadeUp(byte devID);
 
     /* send the shade moving DOWN indication towards the raspy */
     static void sendShadeDown(byte devID);
+    static void sendUserShadeDown(byte devID);
 
     /* send the shade stopped indication towards the raspy */
     static void sendShadeStop(byte devID);
+    static void sendUserShadeStop(byte devID);
 
     /* send the shade current position towards the raspy */
     static void sendShadePosition(byte devID, byte position);
 
     /* send the shade current tilt towards the raspy */
     static void sendShadeTilt(byte devID, byte tilt);
+    static void sendUserShadeTilt(byte devID, byte tilt);
 
     /* get the currently assigned raspberry IP address */
     static IPAddress getRaspyIP();
@@ -352,6 +358,9 @@ class ARiFClass {
 
     /* send light specific settings */
     static void sendLightSettings(byte devID, unsigned long timer, byte type, byte inputType, byte ctrlON);
+
+    /* send shade position timer */
+    static void sendShadeSettings(byte devID, int positionTimer, int tiltTimer);
 
     /* send light Type */
     static void sendLightType(byte devID, byte value);

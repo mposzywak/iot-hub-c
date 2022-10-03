@@ -46,7 +46,23 @@
                                                  CONTROLLINO_I17,
                                                  CONTROLLINO_I18,
                                                  CONTROLLINO_IN0,
-                                                 CONTROLLINO_IN1 };
+                                                 CONTROLLINO_IN1,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN };
 
     /* The output pin array */
     static byte Settings::digitOUT[OUT_PINS] = { CONTROLLINO_D0, 
@@ -69,7 +85,23 @@
                                                  CONTROLLINO_D17,
                                                  CONTROLLINO_D18,
                                                  CONTROLLINO_D19,
-                                                 CONTROLLINO_D20 };
+                                                 CONTROLLINO_D20,
+                                                 CONTROLLINO_R0,
+                                                 CONTROLLINO_R1,
+                                                 CONTROLLINO_R2,
+                                                 CONTROLLINO_R3,
+                                                 CONTROLLINO_R4,
+                                                 CONTROLLINO_R5,
+                                                 CONTROLLINO_R6,
+                                                 CONTROLLINO_R7,
+                                                 CONTROLLINO_R8,
+                                                 CONTROLLINO_R9,
+                                                 CONTROLLINO_R10,
+                                                 CONTROLLINO_R11,
+                                                 CONTROLLINO_R12,
+                                                 CONTROLLINO_R13,
+                                                 CONTROLLINO_R14,
+                                                 CONTROLLINO_R15 };
 
     /* The input pin devID array */
     //static byte Settings::digitINdevID[IN_PINS] = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30 };
@@ -81,14 +113,14 @@
     static byte Settings::shadeIDs[SHADES] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 
     /* the lightID array (numbers must be consecutive) */
-    static byte Settings::lightIDs[LIGHTS] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 };
+    static byte Settings::lightIDs[LIGHTS] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37};
 
     /* 1-wire pin number */
     static byte Settings::oneWirePin = 20;
 
 #elif defined(CONTROLLINO_MAXI) 
-    static byte Settings::digitIN[IN_PINS] =   { CONTROLLINO_A0, 
-                                                 CONTROLLINO_A1, 
+    static byte Settings::digitIN[IN_PINS] =   { CONTROLLINO_A0,
+                                                 CONTROLLINO_A1,
                                                  CONTROLLINO_A2,
                                                  CONTROLLINO_A3,
                                                  CONTROLLINO_A4,
@@ -98,7 +130,17 @@
                                                  CONTROLLINO_A8,
                                                  CONTROLLINO_A9,
                                                  CONTROLLINO_IN0,
-                                                 CONTROLLINO_IN1 };
+                                                 CONTROLLINO_IN1,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN,
+                                                 CONTROLLINO_DUMMY_PIN };
 
     /* The output pin array */
     static byte Settings::digitOUT[OUT_PINS] = { CONTROLLINO_D0, 
@@ -112,19 +154,23 @@
                                                  CONTROLLINO_D8,
                                                  CONTROLLINO_D9,
                                                  CONTROLLINO_D10,
-                                                 CONTROLLINO_D11 };
-                            
-    /* The input pin devID array */
-    //static byte Settings::digitINdevID[IN_PINS] = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 };
-
-    /* the output pin devID array */
-    //static byte Settings::digitOUTdevID[OUT_PINS] = { 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61 };
+                                                 CONTROLLINO_D11,
+                                                 CONTROLLINO_R0,
+                                                 CONTROLLINO_R1,
+                                                 CONTROLLINO_R2,
+                                                 CONTROLLINO_R3,
+                                                 CONTROLLINO_R4,
+                                                 CONTROLLINO_R5,
+                                                 CONTROLLINO_R6,
+                                                 CONTROLLINO_R7,
+                                                 CONTROLLINO_R8,
+                                                 CONTROLLINO_R9 };
 
     /* the shadeID array (numbers must be consecutive) */
     static byte Settings::shadeIDs[SHADES] = { 1, 2, 3, 4, 5, 6 };
 
     /* the lightID array (numbers must be consecutive) */
-    static byte Settings::lightIDs[LIGHTS] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+    static byte Settings::lightIDs[LIGHTS] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 };
 
     /* 1-wire pin number */
     static byte Settings::oneWirePin = 20;
@@ -290,9 +336,17 @@ static void Settings::setInPinMode(uint8_t pin) {
 
 static int Settings::getInputPinValue(uint8_t pin) {
 #if defined(CONTROLLINO_MEGA)
-  return digitalRead(pin);
+  if (pin != CONTROLLINO_DUMMY_PIN) {
+    return digitalRead(pin);
+  } else {
+    return LOW;  
+  }
 #elif defined(CONTROLLINO_MAXI)
-  return digitalRead(pin);
+  if (pin != CONTROLLINO_DUMMY_PIN) {
+    return digitalRead(pin);
+  } else {
+    return LOW;  
+  }
 #elif defined(CONTROLLINO_MAXI_AUTOMATION)
   return digitalRead(pin);
 #elif defined(ARDUINO_AVR_MEGA2560)
@@ -516,53 +570,129 @@ static byte Settings::EEPROMGetLightCentral() {
    EEPROM storage of individual configuration of devices to work properly */
 
 /* The following scheme shows how the data is stored (for a shade type device):
- *  xx xxxx xx xx xx xxxx
- *  |  |    |  |  |  |__________ The tile timer value (int)
- *  |  |    |  |  |__________ The position timer value (byte)
- *  |  |    |  |__________ The shade device type: (byte)
- *  |  |    |_________ flags field (byte) 
- *  |  |_______ The Tilt position of shade device: (int)
- *  |____ The Position of the shade (current state): (byte)
+ *  xxxx xx xx xx xx xx xxxx
+ *  |    |  |  |  |  |  |__________ The tile timer value (int)
+ *  |    |  |  |  |  |__________ The position timer value (byte)
+ *  |    |  |  |  |__________ The shade device type: (byte) [reserved for future]
+ *  |    |  |  |_________ flags field (byte) -------------------\
+ *  |    |  |__________ reached position (byte)                 |
+ *  |    |__________ The Tilt position of shade device: (byte)  |
+ *  |____ The Position of the shade (current state): (int)      |
+ *                                                              |
+ *  Flags: <----------------------------------------------------/
+ *  xxxx xxxx
+ *  |
+ *  |______________ sync (1)/unsync (0) indication
+ *  
  */
+
+static void Settings::EEPROMSetShadeSyncFlag(byte devID) {
+  if (devID > SHADES) return;
+  int index = EEPROM_IDX_SHADES + (EEPROM_IDX_SHADES_LENGTH * (devID - 1));
+  byte flags;
+  flags = EEPROM.read(index + 4);
+  flags = SET_BIT(flags, 7);
+  EEPROM.write(index + 4, flags);
+}
+
+static bool Settings::EEPROMGetShadeSyncFlag(byte devID) {
+  if (devID > SHADES) return;
+  int index = EEPROM_IDX_SHADES + (EEPROM_IDX_SHADES_LENGTH * (devID - 1));
+  byte unsyncFlag = 0;
+  byte flags;
+  flags = EEPROM.read(index + 4);
+  unsyncFlag = GET_BIT(flags, 7);
+  return (bool) unsyncFlag; 
+}
+
+static void Settings::EEPROMClearShadeSyncFlag(byte devID) {
+  if (devID > SHADES) return;
+  int index = EEPROM_IDX_SHADES + (EEPROM_IDX_SHADES_LENGTH * (devID - 1));
+  byte flags;
+  flags = EEPROM.read(index + 4);
+  flags = CLEAR_BIT(flags, 7);
+  EEPROM.write(index + 4, flags);
+}
+
+static void Settings::EEPROMSetShadePosition(byte devID, int position) {
+  if (devID > SHADES) return;
+  int index = EEPROM_IDX_SHADES + (EEPROM_IDX_SHADES_LENGTH * (devID - 1));
+  EEPROMWriteInt(index, position);
+}
+
+static int Settings::EEPROMGetShadePosition(byte devID) {
+  int index = EEPROM_IDX_SHADES + (EEPROM_IDX_SHADES_LENGTH * (devID - 1));
+  int position;
+  position = EEPROMReadInt(index);
+  return position;
+}
+
+static void Settings::EEPROMSetShadeReachedPosition(byte devID, byte reachedPosition) {
+  if (devID > SHADES) return;
+  int index = EEPROM_IDX_SHADES + (EEPROM_IDX_SHADES_LENGTH * (devID - 1));
+  EEPROM.write(index + 3, reachedPosition);
+}
+
+static byte Settings::EEPROMGetShadeReachedPosition(byte devID) {
+  int index = EEPROM_IDX_SHADES + (EEPROM_IDX_SHADES_LENGTH * (devID - 1));
+  int reachedPosition;
+  reachedPosition = EEPROM.read(index + 3);
+  return reachedPosition;
+}
+
+static void Settings::EEPROMSetShadeTilt(byte devID, byte tilt) {
+  if (devID > SHADES) return;
+  int index = EEPROM_IDX_SHADES + (EEPROM_IDX_SHADES_LENGTH * (devID - 1));
+  EEPROM.write(index + 2, tilt);
+}
+
+static byte Settings::EEPROMGetShadeTilt(byte devID) {
+  int index = EEPROM_IDX_SHADES + (EEPROM_IDX_SHADES_LENGTH * (devID - 1));
+  byte tilt;
+  tilt = EEPROM.read(index + 2);
+  return tilt;
+}
 
 static void Settings::EEPROMSetShadeType(byte devID, byte type) {
   if (devID > SHADES) return;
-  int index = EEPROM_IDX_SHADES + (7 * (devID - 1));
-  EEPROM.write(index + 4, type);
+  int index = EEPROM_IDX_SHADES + (EEPROM_IDX_SHADES_LENGTH * (devID - 1));
+  EEPROM.write(index + 5, type);
 }
 
 static void Settings::EEPROMSetShadeTiltTimer(byte devID, int timer) {
   if (devID > SHADES) return;
-  int index = EEPROM_IDX_SHADES + (7 * (devID - 1));
-  EEPROMWriteInt(index + 6, timer);
+  int index = EEPROM_IDX_SHADES + (EEPROM_IDX_SHADES_LENGTH * (devID - 1));
+  EEPROMWriteInt(index + 7, timer);
 }
 
 static void Settings::EEPROMSetShadePosTimer(byte devID, byte timer) {
   if (devID > SHADES) return;
-  int index = EEPROM_IDX_SHADES + (7 * (devID - 1));
-  EEPROM.write(index + 5, timer);
+  int index = EEPROM_IDX_SHADES + (EEPROM_IDX_SHADES_LENGTH * (devID - 1));
+  EEPROM.write(index + 6, timer);
 }
 
 static byte Settings::EEPROMGetShadeType(byte devID) {
-  int index = EEPROM_IDX_SHADES + (7 * (devID - 1));
+  int index = EEPROM_IDX_SHADES + (EEPROM_IDX_SHADES_LENGTH * (devID - 1));
   byte type;
-  type = EEPROM.read(index + 4);
+  type = EEPROM.read(index + 5);
   return type;
 }
 
 static int Settings::EEPROMGetShadeTiltTimer(byte devID) {
-  int index = EEPROM_IDX_SHADES + (7 * (devID - 1));
+  int index = EEPROM_IDX_SHADES + (EEPROM_IDX_SHADES_LENGTH * (devID - 1));
   int timer;
-  timer = EEPROMReadInt(index + 6);
+  timer = EEPROMReadInt(index + 7);
   return timer;
 }
 
 static byte Settings::EEPROMGetShadePosTimer(byte devID) {
-  int index = EEPROM_IDX_SHADES + (7 * (devID - 1));
+  int index = EEPROM_IDX_SHADES + (EEPROM_IDX_SHADES_LENGTH * (devID - 1));
   byte timer;
-  timer = EEPROM.read(index + 5);
+  timer = EEPROM.read(index + 6);
   return timer;
 }
+
+/* ----- network ----- */
 
 static void Settings::EEPROMSetMAC(byte *mac) {
   for (byte i = 0; i < 6; i++) {
@@ -611,6 +741,18 @@ static void Settings::EEPROMRaze() {
     } else {
       EEPROM.write(i, 255);
     }
+  }
+
+  /* set all EEPROM Shades as unsynced and default timers */
+  for (int i = 0; i < SHADES; i++) {
+    EEPROMClearShadeSyncFlag(Settings::shadeIDs[i]);
+    EEPROMSetShadeTiltTimer(Settings::shadeIDs[i], EEPROM_SHADE_DEFAULT_TILT_TIMER);
+    EEPROMSetShadePosTimer(Settings::shadeIDs[i], EEPROM_SHADE_DEFAULT_POSITION_TIMER);
+  }
+
+  /* set all EEPROM Lights default values */
+  for (int i = 0; i < LIGHTS; i++) {
+    EEPROMSetLightTimer(Settings::lightIDs[i], EEPROM_DIGITOUT_DEFAULT_TIMER);
   }
 }
 

@@ -20,6 +20,15 @@
 
   RELEASE NOTES:
 
+  BarnGA-0.5 (or 1.2.1)
+    - Added Controllino build-in relay support
+    - fixed the tilt and position timers support by ARiF
+    - Added Shade state stored in EEPROM
+    - Added "User" indication to shades triggered by physical switch
+    - issues:
+      - Problem with lack of time gap between changing direction when shade not in sync
+
+      
   BarnGA-0.4
     - Added 1-wire temp sensor
     - implemented factory reset on "restore" cmd and on new install.
@@ -243,6 +252,7 @@ void loop() {
       byte downPressResult = shades[i].isDownPressed();
 
       if (upPressResult == PHY_MOMENTARY_PRESS) {
+        shades[i].setUserPressed();
         if (shades[i].isMoving()) {
           shades[i].stopWithTilt();
         } else {
@@ -250,6 +260,7 @@ void loop() {
         }
         measure = true;
       } else if (upPressResult == PHY_PRESS_MORE_THAN_2SEC) {
+        shades[i].setUserPressed();
         if (shades[i].isMoving()) {
           shades[i].stopWithTilt();
         } else {
@@ -258,6 +269,7 @@ void loop() {
       }
 
       if (downPressResult == PHY_MOMENTARY_PRESS) {
+        shades[i].setUserPressed();
         if (shades[i].isMoving()) {
           shades[i].stopWithTilt();
         } else {
@@ -265,6 +277,7 @@ void loop() {
         }
         measure = true;
       } else if (downPressResult == PHY_PRESS_MORE_THAN_2SEC) {
+        shades[i].setUserPressed();
         if (shades[i].isMoving()) {
           shades[i].stopWithTilt();
         } else {
@@ -273,23 +286,54 @@ void loop() {
       }
 
       if (shades[i].justStoppedTilt()) { /* executed on shade stopped tilt movement */
-        ARiF.sendShadeTilt(Settings::shadeIDs[i], shades[i].getTilt());
+        if (shades[i].getUserPressed()) {
+          ARiF.sendUserShadeTilt(Settings::shadeIDs[i], shades[i].getTilt());
+        } else {
+          ARiF.sendShadeTilt(Settings::shadeIDs[i], shades[i].getTilt());
+        }
         WebGUI.shadeSetTilt(devID, shades[i].getTilt());
         WebGUI.shadeSetDirection(devID, S_WEBGUI_STOP);
+        Platform.EEPROMSetShadeTilt(devID, shades[i].getTilt());
       }
 
       if (shades[i].justStopped()) { /* executed on shade stopped vertical movement */
-        ARiF.sendShadeStop(Settings::shadeIDs[i]);
+        if (shades[i].getUserPressed()) {
+          ARiF.sendUserShadeStop(Settings::shadeIDs[i]);
+          shades[i].clearUserPressed();
+        } else {
+          ARiF.sendShadeStop(Settings::shadeIDs[i]);
+        }
         ARiF.sendShadePosition(Settings::shadeIDs[i], shades[i].getCurrentPosition());
         WebGUI.shadeSetPosition(devID, shades[i].getCurrentPosition());
+        Platform.EEPROMSetShadePosition(devID, shades[i].getPosition());
+        Platform.EEPROMSetShadeReachedPosition(devID, shades[i].getCurrentPosition());
+        if (shades[i].isSynced()) {
+          Platform.EEPROMSetShadeSyncFlag(devID);
+        }
       }
       if (shades[i].justStartedDown()) { /* executed on shade started moving down */
-        ARiF.sendShadeDown(Settings::shadeIDs[i]);
+        Platform.EEPROMClearShadeSyncFlag(Settings::shadeIDs[i]);
+        if (shades[i].getUserPressed()) {
+          ARiF.sendUserShadeDown(Settings::shadeIDs[i]);
+          shades[i].clearUserPressed();
+        } else {
+          ARiF.sendShadeDown(Settings::shadeIDs[i]);
+        }
         WebGUI.shadeSetDirection(devID, S_WEBGUI_DOWN);
       }
       if (shades[i].justStartedUp()) { /* executed on shade started moving up */
-        ARiF.sendShadeUp(Settings::shadeIDs[i]);
+        Platform.EEPROMClearShadeSyncFlag(Settings::shadeIDs[i]);
+        if (shades[i].getUserPressed()) {
+          ARiF.sendUserShadeUp(Settings::shadeIDs[i]);
+          shades[i].clearUserPressed();
+        } else {
+          ARiF.sendShadeUp(Settings::shadeIDs[i]);
+        }
         WebGUI.shadeSetDirection(devID, S_WEBGUI_UP);
+      }
+      if (shades[i].justSynced()) {
+        Serial.println(F("Just synced!"));
+        Platform.EEPROMSetShadeSyncFlag(devID);
       }
     }
 
@@ -437,7 +481,6 @@ void loop() {
       Serial.print(F("Shadetilt received: "));
       Serial.println(ARiF.getLastShadeTilt());
       lastDevID = ARiF.getLastDevID();
-      //Serial.println(s.getDevID()); // why s.toPosition() doesn't work??
       for (int i = 0; i < SHADES; i++) {
         if (shades[i].getDevID() == lastDevID) shades[i].setTilt(ARiF.getLastShadeTilt());
       }
@@ -518,6 +561,7 @@ void loop() {
           if (shades[i].getDevID() == lastDevID) {
             shades[i].setPositionTimer(lastShadePositionTimer);
             Platform.EEPROMSetShadePosTimer(lastDevID, lastShadePositionTimer);
+            ARiF.sendShadeSettings(lastDevID, lastShadePositionTimer, shades[i].getTiltTimer());
           }
         }
       } else {
@@ -536,6 +580,7 @@ void loop() {
           if (shades[i].getDevID() == lastDevID) {
             shades[i].setTiltTimer(lastShadeTiltTimer);
             Platform.EEPROMSetShadeTiltTimer(lastDevID, lastShadeTiltTimer);
+            ARiF.sendShadeSettings(lastDevID, shades[i].getPositionTimer(), lastShadeTiltTimer);
           }
         }
       } else {
@@ -549,7 +594,6 @@ void loop() {
         if (lights[i].getDevID() == lastDevID) {
           lights[i].setInputTypeHold();
           Platform.EEPROMSetLightInputType(lastDevID, DIGITOUT_SWITCH_PRESS_HOLD);
-          //ARiF.sendLightInputType(lastDevID, DIGITOUT_SWITCH_PRESS_HOLD);
           ARiF.sendLightSettings(lastDevID, lights[i].getTimer(), lights[i].getType(), DIGITOUT_SWITCH_PRESS_HOLD, lights[i].getCtrlON());
         }
       }
@@ -561,7 +605,6 @@ void loop() {
         if (lights[i].getDevID() == lastDevID) {
           lights[i].setInputTypeRelease();
           Platform.EEPROMSetLightInputType(lastDevID, DIGITOUT_SWITCH_PRESS_RELEASE);
-          //ARiF.sendLightInputType(lastDevID, DIGITOUT_SWITCH_PRESS_RELEASE);
           ARiF.sendLightSettings(lastDevID, lights[i].getTimer(), lights[i].getType(), DIGITOUT_SWITCH_PRESS_RELEASE, lights[i].getCtrlON());
         }
       }
@@ -573,7 +616,6 @@ void loop() {
         if (lights[i].getDevID() == lastDevID) {
           lights[i].setInputTypeSimpleHeatOverrideOn();
           Platform.EEPROMSetLightInputType(lastDevID, DIGITOUT_SWITCH_HEAT_OVERRIDE_ON);
-          //ARiF.sendLightInputType(lastDevID, DIGITOUT_SWITCH_HEAT_OVERRIDE_ON);
           ARiF.sendLightSettings(lastDevID, lights[i].getTimer(), lights[i].getType(), DIGITOUT_SWITCH_HEAT_OVERRIDE_ON, lights[i].getCtrlON());
         }
       }
@@ -825,26 +867,56 @@ void initializeLights() {
 /* Initialize all Shades from EEPROM */
 void initializeShades() {
   Serial.println(F("Initialize system as: MODE_SHADES"));
-  byte posTimer;
+  int posTimer;
   int tiltTimer;
+  bool synced;
+  int position;
+  int tilt;
+  byte reachedPosition;
   for (int i = 0; i < SHADES; i++) {
-    shades[i].init(Settings::shadeIDs[i]);
-    WebGUI.shadeInit(i, Settings::shadeIDs[i]);
     posTimer = Platform.EEPROMGetShadePosTimer(Platform.shadeIDs[i]);
     tiltTimer = Platform.EEPROMGetShadeTiltTimer(Platform.shadeIDs[i]);
+    synced = Platform.EEPROMGetShadeSyncFlag(Platform.shadeIDs[i]);
+
     /* if recorded EEPROM value is different than the allowed ones, overwrite EEPROM with default */
-    if (posTimer != Shade::validatePositionTimer(posTimer)) {
+    /*if (posTimer != Shade::validatePositionTimer(posTimer)) {
       Platform.EEPROMSetShadePosTimer(Platform.shadeIDs[i], Shade::validatePositionTimer(posTimer));
+      posTimer = Platform.EEPROMGetShadePosTimer(Platform.shadeIDs[i]);
     }
     if (tiltTimer != Shade::validateTiltTimer(tiltTimer)) {
       Platform.EEPROMSetShadeTiltTimer(Platform.shadeIDs[i], Shade::validateTiltTimer(tiltTimer));
+      tiltTimer = Platform.EEPROMGetShadeTiltTimer(Platform.shadeIDs[i]);
+    }*/
+    
+    if (synced) {
+      position = Platform.EEPROMGetShadePosition(Platform.shadeIDs[i]);
+      tilt = Platform.EEPROMGetShadeTilt(Platform.shadeIDs[i]);
+      reachedPosition = Platform.EEPROMGetShadeReachedPosition(Platform.shadeIDs[i]);
+      shades[i].init(Settings::shadeIDs[i], synced, tilt, position, reachedPosition, posTimer, tiltTimer);
+    } else {
+      shades[i].init(Settings::shadeIDs[i], synced, TILT_H_CLOSED, 0, 0, posTimer, tiltTimer);
     }
+    WebGUI.shadeInit(i, Settings::shadeIDs[i]);
+    
     Serial.print(F("Shade: "));
     Serial.print(shades[i].getDevID());
     Serial.print(F(", posTimer: "));
     Serial.print(posTimer);
     Serial.print(F(", tiltTimer: "));
-    Serial.println(tiltTimer);
+    Serial.print(tiltTimer);
+    Serial.print(F(", synced: "));
+    if (synced) {
+      Serial.print(synced);
+      Serial.print(F(", position: "));
+      Serial.print(position);
+      Serial.print(F(", tilt: "));
+      Serial.println(tilt);
+    } else {
+      Serial.println(synced);
+    }
+
+    //shades[i].setPositionTimer(posTimer);
+    //shades[i].setTiltTimer(tiltTimer);
   }
 
   for (int i = 0; i < SHADES; i++) {
@@ -862,7 +934,9 @@ void sendShadeStatus() {
       ARiF.sendShadePosition(Settings::shadeIDs[i], shades[i].getCurrentPosition());
     } else {
       ARiF.sendShadeUnsynced(Settings::shadeIDs[i]);
+      Serial.println("Sending unsync");
     }
+    ARiF.sendShadeSettings(Settings::shadeIDs[i], shades[i].getPositionTimer(), shades[i].getTiltTimer());
   }
 }
 

@@ -588,10 +588,10 @@ static bool ARiFClass::checkIotGwIP(IPAddress ip) {
 static void ARiFClass::sendShadeStatus(byte devID, byte dataType, byte value) {
   if (!isConnected) return;  // exit function if the link is dead;
   if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
-    Serial.print("devID: ");
+    Serial.print(F("devID: "));
     Serial.print(devID);
-    Serial.print(" sending to "); // to be removed
-    Serial.print(ARiFClient.remoteIP()); // to be removed
+    Serial.print(F(" sending to ")); // to be removed
+    Serial.println(ARiFClient.remoteIP()); // to be removed
     // Make a HTTP request:
     ARiFClient.print("POST /?devID=");
     ARiFClient.print(devID);
@@ -609,28 +609,28 @@ static void ARiFClass::sendShadeStatus(byte devID, byte dataType, byte value) {
         ARiFClient.print(raspyID);
       }
     }
-    if (dataType == DT_DIRECTION) {
+    if (dataType == DT_DIRECTION || dataType == DT_DIRECTION_USER) {
       Serial.print(" direction -> ");
       ARiFClient.print(F("&cmd=status&devType=shade&dataType=direction&value="));
       if (value == VAL_MOVE_DOWN) {
         ARiFClient.print("down\n");
-        Serial.println(" down. ");
+        Serial.println(F(" down. "));
       } else if (value == VAL_MOVE_UP) {
         ARiFClient.print("up\n");
-        Serial.println(" up. ");
+        Serial.println(F(" up. "));
       } else if (value == VAL_STOPPED) {
         ARiFClient.print("stop\n");
-        Serial.println(" stop. ");
+        Serial.println(F(" stop. "));
       }
     } else if (dataType == DT_POSITION) {
-      Serial.print(" position: ");
+      Serial.print(F(" position: "));
       Serial.println(value);
       ARiFClient.print(F("&cmd=status&devType=shade&dataType=position&value="));
       ARiFClient.print(value);
       ARiFClient.print("\n");
-    } else if (dataType == DT_TILT) {
+    } else if (dataType == DT_TILT || dataType == DT_TILT_USER) {
       ARiFClient.print(F("&cmd=status&devType=shade&dataType=tilt&value="));
-      Serial.print(" tilt: ");
+      Serial.print(F(" tilt: "));
       Serial.println(value);
       ARiFClient.print(value);
       ARiFClient.print("\n");
@@ -641,6 +641,10 @@ static void ARiFClass::sendShadeStatus(byte devID, byte dataType, byte value) {
       } else if (value == VAL_SYNC) {
         ARiFClient.print("1\n");
       }
+    }
+
+    if (dataType == DT_DIRECTION_USER || dataType == DT_TILT_USER) {
+      ARiFClient.println("iot-user: true");
     }
 
     ARiFClient.println("Host: raspy");
@@ -663,12 +667,28 @@ static void ARiFClass::sendShadeStop(byte devID) {
   sendShadeStatus(devID, DT_DIRECTION, VAL_STOPPED);
 }
 
+static void ARiFClass::sendUserShadeUp(byte devID) {
+  sendShadeStatus(devID, DT_DIRECTION_USER, VAL_MOVE_UP);
+}
+
+static void ARiFClass::sendUserShadeDown(byte devID) {
+  sendShadeStatus(devID, DT_DIRECTION_USER, VAL_MOVE_DOWN);
+}
+
+static void ARiFClass::sendUserShadeStop(byte devID) {
+  sendShadeStatus(devID, DT_DIRECTION_USER, VAL_STOPPED);
+}
+
 static void ARiFClass::sendShadePosition(byte devID, byte position) {
   sendShadeStatus(devID, DT_POSITION, position);
 }
 
 static void ARiFClass::sendShadeTilt(byte devID, byte tilt) {
   sendShadeStatus(devID, DT_TILT, tilt);
+}
+
+static void ARiFClass::sendUserShadeTilt(byte devID, byte tilt) {
+  sendShadeStatus(devID, DT_TILT_USER, tilt);
 }
 
 static void ARiFClass::sendShadeSynced(byte devID) {
@@ -724,6 +744,8 @@ unsigned long ARiFClass::getLastLightTimer() {
 }
 
 int ARiFClass::getLastShadePositionTimer() {
+  Serial.print(F("Getting last positionTimer: "));
+  Serial.println(lastShadePositionTimer);
   return lastShadePositionTimer;
 }
 
@@ -796,6 +818,46 @@ static void ARiFClass::sendSettings() {
     String json = "{\"version\":\"";
     json = json + VERSION;
     json = json + "\",\"ctrlON\":" + ctrlON + ",\"mode\":" + mode + ", \"uptime\":" + millis() + ", \"restore\":" + restore + "}";
+    String content = "Content-Length: ";
+    content = content + json.length() + "\r\n";
+    ARiFClient.println(content);
+    ARiFClient.println(json);
+    ARiFClient.println();
+  } else {
+    Serial.println(F("Problem with connecting"));
+  }
+}
+
+static void ARiFClass::sendShadeSettings(byte devID, int positionTimer, int tiltTimer) {
+  if (!isConnected) return;  // exit function if the link is dead;
+  //unsigned long sPositionTimer = 0;
+  //sPositionTimer = (unsigned long) positionTimer * 100;
+  if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
+    ARiFClient.print(F("POST /?devID="));
+    ARiFClient.print(devID);
+    ARiFClient.print(F("&ardID="));
+    ARiFClient.print(ardID);
+    ARiFClient.print(F("&raspyID="));
+    if (raspyID < 10) {
+      ARiFClient.print("00");
+      ARiFClient.print(raspyID);
+    } else {
+      if (raspyID >= 10 < 100) {
+        ARiFClient.print("0");
+        ARiFClient.print(raspyID);
+      } else {
+        ARiFClient.print(raspyID);
+      }
+    }
+    ARiFClient.print(F("&cmd=shadeSettings\n"));
+    Serial.println(F("Sending shade settings"));
+
+    ARiFClient.println("Host: raspy");
+    ARiFClient.println("Connection: close");
+    ARiFClient.println("Content-Type: application/json");
+    String json = "{\"posTimer\":\"";
+    json = json + positionTimer;
+    json = json + "\",\"tiltTimer\":" + tiltTimer + "}";
     String content = "Content-Length: ";
     content = content + json.length() + "\r\n";
     ARiFClient.println(content);
