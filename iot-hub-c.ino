@@ -20,6 +20,9 @@
 
   RELEASE NOTES:
 
+  v1.2.2
+    - Fixed raspy IP change through HB message from a new IP.
+
   BarnGA-0.5 (or 1.2.1)
     - Added Controllino build-in relay support
     - fixed the tilt and position timers support by ARiF
@@ -680,6 +683,11 @@ void loop() {
       ARiF.deregister();
       Platform.EEPROMDeregister();
       break;
+    case U_RASPYIPCHGD:
+      Serial.println(F("Raspy IP changed"));
+      iotGwIP = ARiF.getRaspyIP();
+      Platform.EEPROMSetRaspyIP(iotGwIP);
+      break;
     case CMD_UNKNOWN:                                  /* unknown command received */
       Serial.print(F("Received unknown command from: "));
       Serial.print(ARiF.getLastDevID());
@@ -731,18 +739,6 @@ Shade getShade(byte devID) {
   }
 }
 
-
-/* check if the IP address is the same as the one save in iotGwIP
-   if it is not save the new IP into EEPROM*/
-bool checkIotGwIP(IPAddress ip) {
-  if (iotGwIP == ip) {
-    return true;
-  } else {
-    iotGwIP = ip;
-    Platform.EEPROMSetRaspyIP(ip);
-    return false;
-  }
-}
 
 /* set mode into shades */
 void setModeShades() {

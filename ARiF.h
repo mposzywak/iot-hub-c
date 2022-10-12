@@ -272,6 +272,9 @@ class ARiFClass {
      * If it is, replace it and restart Ethernet and save the new MAC into EEPROM.
      */
     static byte replaceMAC();
+
+    /* compares two IP addresses. Returns true if they are the same IP, otherwise returns false */
+    static bool compareIP(IPAddress ip1, IPAddress ip2);
     
   public:
 
