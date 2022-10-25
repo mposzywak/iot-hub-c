@@ -393,7 +393,7 @@ static bool Settings::EEPROMIsRegistered() {
    return (bool) EEPROM.read(EEPROM_IDX_REG);
 }
 
-static IPAddress Settings::EEPROMGetRaspyIP( ) {
+static IPAddress Settings::EEPROMGetRaspyIP() {
   byte address[4];
   EEPROM.get(EEPROM_IDX_RASPYIP, address);
   return address;
@@ -412,7 +412,10 @@ static void Settings::EEPROMDeregister() {
 }
 
 static void Settings::EEPROMSetRaspyIP(IPAddress addr) {
-  EEPROM.put(EEPROM_IDX_RASPYIP, addr);
+  EEPROM.write(EEPROM_IDX_RASPYIP, addr[0]);
+  EEPROM.write(EEPROM_IDX_RASPYIP + 1, addr[1]);
+  EEPROM.write(EEPROM_IDX_RASPYIP + 2, addr[2]);
+  EEPROM.write(EEPROM_IDX_RASPYIP + 3, addr[3]);
 }
 
 static void Settings::EEPROMRegister(byte ardID, byte raspyID, IPAddress addr) {

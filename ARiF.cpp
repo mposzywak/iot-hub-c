@@ -155,7 +155,9 @@ static byte ARiFClass::update() {
   EthernetClient client = ARiFServer.available();
   if (client) {
     Serial.print("HTTP Request received from: ");
-    Serial.println(client.remoteIP());
+    IPAddress clientIP;
+    clientIP = client.remoteIP();
+    Serial.println(clientIP);
     char buff[ARiF_HTTP_BUFF];
     int index = 0;
     byte devID;
@@ -176,6 +178,11 @@ static byte ARiFClass::update() {
           if (isConnected == 0) {
             isConnected = true;
             return U_CONNECTED;
+          }
+          if (!compareIP(clientIP, raspyIP)) { /* IP is different than the stored one */
+            raspyIP = clientIP;
+            Serial.println("Saving IP");
+            return U_RASPYIPCHGD;
           }
         } else {
           client.println(F(HTTP_403_Error)); /* write 403 because the unexpected HB */
@@ -1025,4 +1032,15 @@ static byte ARiFClass::nibble(char c) {
   if (c >= 'A' && c <= 'F')
     return c - 'A' + 10;
   return 0;  // Not a valid hexadecimal character
+}
+
+static bool ARiFClass::compareIP(IPAddress ip1, IPAddress ip2) {
+  bool ipIsSame = true;
+
+  for (int i = 0; i <= 3; i++) {
+    if (ip1[i] != ip2[i]) {
+      ipIsSame = false;
+    }
+  }
+  return ipIsSame;
 }
