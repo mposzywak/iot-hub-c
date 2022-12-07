@@ -20,6 +20,9 @@
 
   RELEASE NOTES:
 
+  v1.3.0
+    - Added counter based inputs
+
   v1.2.2
     - Fixed raspy IP change through HB message from a new IP.
 
@@ -190,7 +193,7 @@ void setup() {
     ARiF.begin(VER_SHD_1, mac, iotGwIP, ardID, raspyID);
     WebGUI.setInfoRegistered(ardID, raspyID, iotGwIP);
   } else {
-    Serial.println("Not registered within any iot-gw");
+    Serial.println(F("Not registered within any iot-gw"));
     ARiF.begin(VER_SHD_1, mac);
     WebGUI.setInfoDeregistered();
   }
@@ -220,7 +223,7 @@ void setup() {
 
   WebGUI.begin();
 
-  Serial.println("Setup complete!");
+  Serial.println(F("Setup complete!"));
 }
 
 /*
@@ -245,10 +248,6 @@ void loop() {
   if (funcMode == MODE_SHADES) {
     for (int i = 0; i < SHADES; i++) {
       shades[i].update();
-      /*if (shades[i].update() <= 100) {
-        Serial.println("Sending 1 shade position");
-        //ARiF.sendShadePosition(shadeIDs[i], shades[i].getCurrentPosition());
-        }*/
 
       byte devID = shades[i].getDevID();
       byte upPressResult = shades[i].isUpPressed();
@@ -289,6 +288,7 @@ void loop() {
       }
 
       if (shades[i].justStoppedTilt()) { /* executed on shade stopped tilt movement */
+        Serial.println("just stopped tilt!");
         if (shades[i].getUserPressed()) {
           ARiF.sendUserShadeTilt(Settings::shadeIDs[i], shades[i].getTilt());
         } else {
@@ -354,7 +354,6 @@ void loop() {
       pressResult = lights[i].isPressed();
 
       if (pressResult == PHY_MOMENTARY_PRESS) {
-        Serial.println(F("press detected"));
         lights[i].toggle();
       } else if (pressResult == PHY_PRESS_MORE_THAN_2SEC) {
         lights[i].toggle();
@@ -385,6 +384,15 @@ void loop() {
             }
           }
         }
+      } else if (pressResult == PHY_COUNTER_TIME_TRIGGER) {
+        unsigned long counter;
+        if (ARiF.isARiFConnected()) {
+          Serial.println(F("Sending counter value"));
+          counter = lights[i].getCounterAndReset();
+          ARiF.sendCounter(devID, counter);
+        } else {
+          Serial.println(F("ARiF Disconnected, not sending counter."));
+        }
       }
 
       if (lights[i].justTurnedON()) {
@@ -411,11 +419,9 @@ void loop() {
       Platform.EEPROMDeregister();
       break;
     case CMD_WEBGUI_SET_M_LIGHTS:                     /* Switch Mode to Lights */
-      Serial.println("Set Variant to lights");
       setModeLights();
       break;
     case CMD_WEBGUI_SET_M_SHADES:                     /* Switch Mode to Shades */
-      Serial.println("Set Variant to shades");
       setModeShades();
       break;
     case CMD_WEBGUI_NOTHING:                          /* Do nothing */
@@ -436,7 +442,7 @@ void loop() {
   int lastShadeTiltTimer;
   switch (ret) {
     case U_CONNECTED:                                  /* ARiF connection with the Raspy has been re-established (or established for the first time) */
-      Serial.println("Connected back!");
+      Serial.println(F("Connected back!"));
       if (funcMode == MODE_SHADES) {
         sendShadeStatus();
       } else if (funcMode == MODE_LIGHTS) {
@@ -630,7 +636,6 @@ void loop() {
         if (lights[i].getDevID() == lastDevID) {
           lights[i].setInputTypeSimpleHeatOverrideOff();
           Platform.EEPROMSetLightInputType(lastDevID, DIGITOUT_SWITCH_HEAT_OVERRIDE_OFF);
-          //ARiF.sendLightInputType(lastDevID, DIGITOUT_SWITCH_HEAT_OVERRIDE_OFF);
           ARiF.sendLightSettings(lastDevID, lights[i].getTimer(), lights[i].getType(), DIGITOUT_SWITCH_HEAT_OVERRIDE_OFF, lights[i].getCtrlON());
         }
       }
@@ -791,7 +796,7 @@ void initializeLights() {
     } else if (type == DIGITOUT_TIMER) {
       Serial.print(F("Light: "));
       Serial.print(Platform.lightIDs[i]);
-      Serial.print(F(" set to: DIGITOUT_TIMER, with timer:"));
+      Serial.print(F(" set to: DIGITOUT_TIMER, with timer: "));
       Serial.print(timer);
       lights[i].init(Platform.lightIDs[i], DIGITOUT_TIMER);
       WebGUI.lightInit(i, Platform.lightIDs[i], S_WEBGUI_L_TIMER);
@@ -801,6 +806,12 @@ void initializeLights() {
       Serial.print(Platform.lightIDs[i]);
       Serial.print(F(" set to: DIGITOUT_SIMPLE_HEAT"));
       lights[i].init(Platform.lightIDs[i], DIGITOUT_SIMPLE_HEAT);
+    } else if (type == DIGITOUT_COUNTER) {
+      Serial.print(F("Device: "));
+      Serial.print(Platform.lightIDs[i]);
+      Serial.print(F(" set to: DIGITOUT_COUNTER, with timer: "));
+      Serial.print(timer);
+      lights[i].init(Platform.lightIDs[i], DIGITOUT_COUNTER);
     } else {
       /* if type cannot be recognized set it by default to DIGITOUT_ONOFF */
       lights[i].init(Platform.lightIDs[i], DIGITOUT_ONOFF);
@@ -930,7 +941,6 @@ void sendShadeStatus() {
       ARiF.sendShadePosition(Settings::shadeIDs[i], shades[i].getCurrentPosition());
     } else {
       ARiF.sendShadeUnsynced(Settings::shadeIDs[i]);
-      Serial.println("Sending unsync");
     }
     ARiF.sendShadeSettings(Settings::shadeIDs[i], shades[i].getPositionTimer(), shades[i].getTiltTimer());
   }

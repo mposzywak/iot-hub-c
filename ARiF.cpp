@@ -54,7 +54,7 @@ static byte ARiFClass::begin(byte version, byte mac[], IPAddress raspyIP, byte a
 static byte ARiFClass::beginEthernet() {
   /*for (byte i = 0; i < 6; i++) {
     mac[i] = m[i];
-  }*/
+    }*/
   if (Platform.EEPROMGetUseDefMAC() == EEPROM_FLG_MEM_MAC) {
     Serial.println(F("Using MAC from EEPROM"));
     Platform.EEPROMGetMAC(mac);
@@ -99,7 +99,7 @@ static byte ARiFClass::replaceMAC() {
     Serial.print(F("New MAC arrived from raspy."));
     for (byte i = 0; i < 6; i++) {
       mac[i] = raspyMAC[i];
-  }
+    }
     restartNewMAC = true;
   }
 }
@@ -181,7 +181,6 @@ static byte ARiFClass::update() {
           }
           if (!compareIP(clientIP, raspyIP)) { /* IP is different than the stored one */
             raspyIP = clientIP;
-            Serial.println("Saving IP");
             return U_RASPYIPCHGD;
           }
         } else {
@@ -191,7 +190,6 @@ static byte ARiFClass::update() {
         }
         break;
       case CMD_REGISTER:
-        Serial.println("register received");
         //if (!isRegistered) { // this is commented out to allow the arduino to be "re-registered"
         ardID = getValue(buff, ARDID);
         raspyID = getValue(buff, RASPYID);
@@ -768,26 +766,8 @@ void ARiFClass::deregister() {
 static void ARiFClass::sendTempStatus(byte devID, float value) {
   if (!isConnected) return;  // exit function if the link is dead;
   if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
-    // Make a HTTP request:
-    Serial.print("sending temp value: ");
-    Serial.println(value);
-    ARiFClient.print("POST /?devID=");
-    ARiFClient.print(devID);
-    ARiFClient.print("&ardID=");
-    ARiFClient.print(ardID);
-    ARiFClient.print("&raspyID=");
-    if (raspyID < 10) {
-      ARiFClient.print("00");
-      ARiFClient.print(raspyID);
-    } else {
-      if (raspyID >= 10 < 100) {
-        ARiFClient.print("0");
-        ARiFClient.print(raspyID);
-      } else {
-        ARiFClient.print(raspyID);
-      }
-    }
 
+    addPreamble(devID);
     ARiFClient.print("&cmd=status&devType=temp&dataType=float&value=");
     ARiFClient.println(value);
 
@@ -802,20 +782,7 @@ static void ARiFClass::sendTempStatus(byte devID, float value) {
 static void ARiFClass::sendSettings() {
   if (!isConnected) return;  // exit function if the link is dead;
   if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
-    ARiFClient.print(F("POST /?devID=0&ardID="));
-    ARiFClient.print(ardID);
-    ARiFClient.print(F("&raspyID="));
-    if (raspyID < 10) {
-      ARiFClient.print("00");
-      ARiFClient.print(raspyID);
-    } else {
-      if (raspyID >= 10 < 100) {
-        ARiFClient.print("0");
-        ARiFClient.print(raspyID);
-      } else {
-        ARiFClient.print(raspyID);
-      }
-    }
+    addPreamble(0);
     ARiFClient.print(F("&cmd=settings\n"));
     Serial.println(F("Sending settings"));
 
@@ -840,22 +807,7 @@ static void ARiFClass::sendShadeSettings(byte devID, int positionTimer, int tilt
   //unsigned long sPositionTimer = 0;
   //sPositionTimer = (unsigned long) positionTimer * 100;
   if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
-    ARiFClient.print(F("POST /?devID="));
-    ARiFClient.print(devID);
-    ARiFClient.print(F("&ardID="));
-    ARiFClient.print(ardID);
-    ARiFClient.print(F("&raspyID="));
-    if (raspyID < 10) {
-      ARiFClient.print("00");
-      ARiFClient.print(raspyID);
-    } else {
-      if (raspyID >= 10 < 100) {
-        ARiFClient.print("0");
-        ARiFClient.print(raspyID);
-      } else {
-        ARiFClient.print(raspyID);
-      }
-    }
+    addPreamble(devID);
     ARiFClient.print(F("&cmd=shadeSettings\n"));
     Serial.println(F("Sending shade settings"));
 
@@ -878,22 +830,7 @@ static void ARiFClass::sendShadeSettings(byte devID, int positionTimer, int tilt
 static void ARiFClass::sendLightSettings(byte devID, unsigned long timer, byte type, byte inputType, byte ctrlON) {
   if (!isConnected) return;  // exit function if the link is dead;
   if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
-    ARiFClient.print(F("POST /?devID="));
-    ARiFClient.print(devID);
-    ARiFClient.print(F("&ardID="));
-    ARiFClient.print(ardID);
-    ARiFClient.print(F("&raspyID="));
-    if (raspyID < 10) {
-      ARiFClient.print("00");
-      ARiFClient.print(raspyID);
-    } else {
-      if (raspyID >= 10 < 100) {
-        ARiFClient.print("0");
-        ARiFClient.print(raspyID);
-      } else {
-        ARiFClient.print(raspyID);
-      }
-    }
+    addPreamble(devID);
     ARiFClient.print(F("&cmd=lightSettings\n"));
     Serial.println(F("Sending device settings"));
 
@@ -913,44 +850,23 @@ static void ARiFClass::sendLightSettings(byte devID, unsigned long timer, byte t
   }
 }
 
-static void ARiFClass::sendMessage(byte devID, byte messageType, byte value) {
+static void ARiFClass::sendMessage(byte devID, byte messageType, unsigned int value) {
   if (!isConnected) return;  // exit function if the link is dead;
   if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
-    // Make a HTTP request:
-    ARiFClient.print("POST /?devID=");
-    ARiFClient.print(devID);
-    ARiFClient.print("&ardID=");
-    ARiFClient.print(ardID);
-    ARiFClient.print("&raspyID=");
-    if (raspyID < 10) {
-      ARiFClient.print("00");
-      ARiFClient.print(raspyID);
-    } else {
-      if (raspyID >= 10 < 100) {
-        ARiFClient.print("0");
-        ARiFClient.print(raspyID);
-      } else {
-        ARiFClient.print(raspyID);
-      }
-    }
-
+    addPreamble(devID);
+    ARiFClient.print("&cmd=status&devType=digitOUT&dataType=");
     switch (messageType) {
-      case _MTYPE_LIGHT_TYPE:
-        ARiFClient.print(F("&cmd=lightType&devType=digitOUT&dataType=byte&value="));
-        ARiFClient.println(value);
-        break;
-      case _MTYPE_LIGHT_INPUT_TYPE:
-        ARiFClient.print(F("&cmd=lightInputType&devType=digitOUT&dataType=byte&value="));
-        ARiFClient.println(value);
-        break;
       case _MTYPE_LIGHT_STATUS_ON:
       case _MTYPE_LIGHT_STATUS_ON_USER:
-        ARiFClient.println("&cmd=status&devType=digitOUT&dataType=bool&value=1");
+        ARiFClient.println("bool&value=1");
         break;
       case _MTYPE_LIGHT_STATUS_OFF:
       case _MTYPE_LIGHT_STATUS_OFF_USER:
-        ARiFClient.println("&cmd=status&devType=digitOUT&dataType=bool&value=0");
+        ARiFClient.println("bool&value=0");
         break;
+      case _MTYPE_LIGHT_STATUS_INT_VALUE:
+        ARiFClient.print("int&value=");
+        ARiFClient.println(value);
     }
 
     if (messageType == _MTYPE_LIGHT_STATUS_ON_USER || messageType == _MTYPE_LIGHT_STATUS_OFF_USER) {
@@ -965,14 +881,24 @@ static void ARiFClass::sendMessage(byte devID, byte messageType, byte value) {
   }
 }
 
-static void ARiFClass::sendLightInputType(byte devID, byte value) {
-  sendMessage(devID, _MTYPE_LIGHT_INPUT_TYPE, value);
+static void ARiFClass::addPreamble(byte devID) {
+  ARiFClient.print("POST /?devID=");
+  ARiFClient.print(devID);
+  ARiFClient.print("&ardID=");
+  ARiFClient.print(ardID);
+  ARiFClient.print("&raspyID=");
+  if (raspyID < 10) {
+    ARiFClient.print("00");
+    ARiFClient.print(raspyID);
+  } else {
+    if (raspyID >= 10 < 100) {
+      ARiFClient.print("0");
+      ARiFClient.print(raspyID);
+    } else {
+      ARiFClient.print(raspyID);
+    }
+  }
 }
-
-static void ARiFClass::sendLightType(byte devID, byte value) {
-  sendMessage(devID, _MTYPE_LIGHT_TYPE, value);
-}
-
 
 static void ARiFClass::sendLightON(byte devID) {
   sendMessage(devID, _MTYPE_LIGHT_STATUS_ON, 0);
@@ -988,6 +914,10 @@ static void ARiFClass::sendLightOFF(byte devID) {
 
 static void ARiFClass::sendUserLightOFF(byte devID) {
   sendMessage(devID, _MTYPE_LIGHT_STATUS_OFF_USER, 0);
+}
+
+static void ARiFClass::sendCounter(byte devID, unsigned int counter) {
+  sendMessage(devID, _MTYPE_LIGHT_STATUS_INT_VALUE, counter);
 }
 
 static void ARiFClass::setMode(byte m) {
@@ -1043,4 +973,8 @@ static bool ARiFClass::compareIP(IPAddress ip1, IPAddress ip2) {
     }
   }
   return ipIsSame;
+}
+
+static bool ARiFClass::isARiFConnected() {
+  return isConnected;
 }

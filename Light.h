@@ -7,6 +7,7 @@
 #define DIGITOUT_ONOFF       0   /* Upon activation it changes the state of the output pin from on to off or vice-versa */
 #define DIGITOUT_TIMER       1   /* Upon activation it changes the state of the output pin to on for an amount of time, after that it goes to off */
 #define DIGITOUT_SIMPLE_HEAT 2   /* simple heat device, the output value is synced 1 to 1 with input value, unless override flag is set, then output changes based on ARiF commands */
+#define DIGITOUT_COUNTER     4   /* the device is of type counter - it will count the state of the input changes to UP */
 #define DIGITOUT_UNK  100        /* value to indicated failed/unreadable value */
 
 /* other default values */
@@ -22,12 +23,16 @@
 /* central control light delay */
 #define DIGITOUT_CENTRAL_CTRL_DELAY 200
 
+/* counter type device default timer */
+#define DIGITOUT_SWITCH_COUNTER_DEF_TIMER 60000
+
 /* types of switches */
 #define DIGITOUT_SWITCH_PRESS_HOLD        0  /* the value indicates that the switch is of type press-and-hold, so the value of the output must change immediately upon pressure */
 #define DIGITOUT_SWITCH_PRESS_RELEASE     1  /* here the value indicates the switch is of type press-and-release, so the value of the output must change upon release of the switch (DEFAULT) */
 #define DIGITOUT_SWITCH_HEAT_OVERRIDE_ON  2  /* The control of the simple heat output is based on the ARiF commands, the input pin is ignored */
 #define DIGITOUT_SWITCH_HEAT_OVERRIDE_OFF 3  /* The control of the simple heat output is based on the input pin, (low to low, high to high) */
 #define DIGITOUT_SWITCH_HEAT_TEMP_SENSOR  4  /* The control of the simple heat output is based on the temperature sensor */
+#define DIGITOUT_SWITCH_COUNTER_UP        5  /* the input type for counter type */
 
 /* values fro the overrideFlag variable */
 #define DIGITOUT_OVERRIDE_OFF          0
@@ -50,7 +55,7 @@ class Light {
     byte type;
 
     /* timer value for DIGITOUT_TIMER type */
-    unsigned long timer;
+    //unsigned long timer;
     t onTimer;
     
     /* ID of the device */
@@ -92,6 +97,9 @@ class Light {
 
     /* variable indicating if the devic is subject to ctrlON operation */
     byte ctrlON;
+
+    /* counter for storing counting value of "ticks" */
+    unsigned long counter;
 
   public:
 
@@ -175,6 +183,9 @@ class Light {
     void Light::setInputTypeSimpleHeatOverrideOff();
 
     void Light::setInputTypeSimpleHeatTempSensor();
+
+    /* return the current counter value and reset the counter */
+    unsigned long Light::getCounterAndReset();
 
 };
 
