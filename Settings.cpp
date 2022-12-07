@@ -446,9 +446,10 @@ static void Settings::EEPROMSetMode(byte mode) {
 /* The shadeIDs and lightIDs are used as index values for the entries in the EEPROM hence they must all start from 1 and be consecutive in order for the 
    EEPROM storage of individual configuration of devices to work properly */
 
-/* The following scheme shows how the data is stored:
- *  xx xx xx xxxxxxxx xx
- *  |  |  |  |        |__ The ctrlON setting of the light (if it is subject to global ctrlON cmd) (byte)
+/* The following scheme shows how the data is stored for lights:
+ *  xx xx xx xxxxxxxx xx xxxxxxxx
+ *  |  |  |  |        |  |__ The float value factor used (not used at the moment)
+ *  |  |  |  |        |_____ The ctrlON setting of the light (if it is subject to global ctrlON cmd) (byte)
  *  |  |  |  |____ The timer value in miliseconds: (unsigned long)
  *  |  |  |_______ The sub-type of light device: lightType (byte)
  *  |  |__________ The ON/OFF status of the light device: lightInputType (byte) 

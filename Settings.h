@@ -9,7 +9,7 @@
 #define SETTINGS_H_
 
 /* version of the current code */
-#define VERSION "1.2.1-beta"
+#define VERSION "1.3.0"
 
 #if defined(CONTROLLINO_MEGA)
 #include <Controllino.h>
@@ -33,6 +33,10 @@
 #define ONE_WIRE_PIN 2
 #endif
 
+/* max variable values */
+#define PLATFORM_MAX_U_INT 65535
+#define PLATFORM_MAX_U_LONG 4294967295
+
 /* dummy controllino input pin */
 #define CONTROLLINO_DUMMY_PIN 255
 
@@ -42,6 +46,7 @@
 #define PHY_PRESS_MORE_THAN_2SEC              12
 #define PHY_CENTRAL_CTRL_MOMENTARY_PRESS      13
 #define PHY_CENTRAL_CTRL_PRESS_MORE_THAN_2SEC 14
+#define PHY_COUNTER_TIME_TRIGGER              15
 
 /* indexes for EEPROM information holding (max size available 4096) */
 #define EEPROM_IDX_ARDID    0  // length 1

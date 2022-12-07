@@ -14,6 +14,7 @@ Light::Light() {
 void Light::init(byte lightID, byte type) {
   this->lightID = lightID;
   this->type = type;
+
   this->outPin = Platform.getLightOutPin(lightID);
   this->inPin = Platform.getLightInPin(lightID);
   Platform.setInPinMode(inPin);
@@ -32,28 +33,39 @@ void Light::init(byte lightID, byte type) {
 
   buttonHold = { 0, 1000, true };
 
-  timer = DIGITOUT_DEFAULT_TIMER;
-  onTimer = { 0, timer * 1000, true };
+  //timer = DIGITOUT_DEFAULT_TIMER;
+  onTimer = { 0, DIGITOUT_DEFAULT_TIMER * 1000, true };
 
   justToggled = false;
-  inputType = DIGITOUT_SWITCH_PRESS_RELEASE;
+  /* set the default inputType for the classic and timer based light */
+  if (type == DIGITOUT_ONOFF || type == DIGITOUT_TIMER) {
+    inputType = DIGITOUT_SWITCH_PRESS_RELEASE;
+  }
+  /* automatically set the inputType for the DIGITOUT_COUNTER as it is the only allowed inputType
+   *  it will not work with any onther inputType */
+  if (type == DIGITOUT_COUNTER) {
+    this->inputType = DIGITOUT_SWITCH_COUNTER_UP;
+  }
   buttonPressHold = { 0, 100, true };
 }
 
 void Light::setType(byte type) {
   this->type = type;
-  /*if (type == DIGITOUT_TIMER) {
-    this->timer = DIGITOUT_DEFAULT_TIMER;
-  }*/
+  if (type == DIGITOUT_COUNTER) {
+    this->inputType = DIGITOUT_SWITCH_COUNTER_UP;
+    onTimer = { 0, DIGITOUT_SWITCH_COUNTER_DEF_TIMER, true };
+    timeRun(&onTimer);
+  }
 }
 
 void Light::setTimer(unsigned long timer) {
-  this->timer = timer;
+  //this->timer = timer;
   this->onTimer.tTimeout = timer;
 }
 
 unsigned long Light::getTimer() {
-  return this->timer;
+  //return this->timer;
+  return this->onTimer.tTimeout;
 }
 
 byte Light::getType() {
@@ -78,8 +90,15 @@ byte Light::getCtrlON() {
 
 byte Light::isPressed() {
   if (timeCheck(&onTimer)) {
-    Serial.println(F("Turning off light after timer expired."));
-    setOFF();
+    if (type == DIGITOUT_TIMER) {
+      Serial.println(F("Turning off light after timer expired."));
+      setOFF();
+    } else if (type == DIGITOUT_COUNTER) {
+      timeRun(&onTimer);
+      Serial.println(F("reporting counter"));
+      /* we just indicate the moment to report the counter, reset shall happen upon reporting */
+      return PHY_COUNTER_TIME_TRIGGER;
+    }
   }
   if (inputType == DIGITOUT_SWITCH_PRESS_RELEASE) {
     inPinState = Settings::getInputPinValue(inPin);
@@ -93,7 +112,7 @@ byte Light::isPressed() {
     } else { /* inPinState == LOW */
       if (inPinPressed) { /* Button is released */
         /* EXECUTED ON BUTTON RELEASE - START */
-        
+        Serial.println(F("Press detected."));
         /* EXECUTED ON BUTTON RELEASE - END */
         if (timeCheck(&buttonHold)) {
           if (this->lightID == Platform.getLastLightDevID() && getCentralCtrl() == DIGITOUT_CENTRAL_CTRL_ENABLE) {
@@ -133,6 +152,30 @@ byte Light::isPressed() {
       return PHY_MOMENTARY_PRESS;
     }
     return PHY_NO_PRESS; /* function must always return a value even if situation "shouldn't" happen. Otherwise the return value is unpredictable */
+  } else if (inputType == DIGITOUT_SWITCH_COUNTER_UP) {
+    inPinState = Settings::getInputPinValue(inPin);
+    if (inPinState == HIGH) { /* Button pressed and held */
+      inPinPressed = true;
+      delay(10); // this delay here was placed in order for the press button result to be predictable
+      return PHY_NO_PRESS;
+    } else { /* inPinState == LOW */
+      if (inPinPressed) { /* Button is released */
+        /* EXECUTED ON BUTTON RELEASE - START */
+        if (counter == PLATFORM_MAX_U_LONG) {
+          return PHY_COUNTER_TIME_TRIGGER;
+        } else {
+          counter++;
+        }
+        Serial.print(F("new Counter value: "));
+        Serial.println(counter);
+        /* EXECUTED ON BUTTON RELEASE - END */
+        inPinPressed = false;
+        delay(10);
+        return PHY_NO_PRESS;
+      } else {
+        return PHY_NO_PRESS;
+      }
+    }
   } else if (inputType == DIGITOUT_SWITCH_HEAT_OVERRIDE_ON) {
     /* do nothing as we ignore the physical input pin */
     //Serial.println(F("Override is on, doing nothing!"));
@@ -186,6 +229,8 @@ void Light::toggle() {
     } else {
       Serial.println(F("This should never happen"));
     }
+  } else if (type == DIGITOUT_COUNTER) {
+    /* do nothing the counter type device will not change its output */
   } else {
     if (outPinState == Light::low) {
       outPinState = Light::high;
@@ -260,33 +305,51 @@ static byte Light::getCentralCtrl() {
 }
 
 void Light::setInputTypeHold() {
-  inputType = DIGITOUT_SWITCH_PRESS_HOLD;
+  /* only change the inputType for the allowed light types */
+  if (this->type == DIGITOUT_ONOFF || this->type == DIGITOUT_TIMER) {
+    inputType = DIGITOUT_SWITCH_PRESS_HOLD;
+  }
 }
 
 void Light::setInputTypeRelease() {
-  inputType = DIGITOUT_SWITCH_PRESS_RELEASE;
+  if (this->type == DIGITOUT_ONOFF || this->type == DIGITOUT_TIMER) {
+    inputType = DIGITOUT_SWITCH_PRESS_RELEASE;
+  }
 }
 
 void Light::setInputTypeSimpleHeatOverrideOn() {
-  inputType = DIGITOUT_SWITCH_HEAT_OVERRIDE_ON;
+  if (this->type == DIGITOUT_SIMPLE_HEAT) {
+    inputType = DIGITOUT_SWITCH_HEAT_OVERRIDE_ON;
+  }
 }
 
 void Light::setInputTypeSimpleHeatOverrideOff() {
-  inputType = DIGITOUT_SWITCH_HEAT_OVERRIDE_OFF;
+  if (this->type == DIGITOUT_SIMPLE_HEAT) {
+    inputType = DIGITOUT_SWITCH_HEAT_OVERRIDE_OFF;
 
-  /* setting the output pin state based on the input pin state */
-  inPinState = Settings::getInputPinValue(inPin);
+    /* setting the output pin state based on the input pin state */
+    inPinState = Settings::getInputPinValue(inPin);
     if (inPinState == HIGH) {
       Platform.setOutputPinValue(outPin, Light::high);
     } else if (inPinState == LOW) {
       Platform.setOutputPinValue(outPin, Light::low);
     } else {
-      Serial.println("This should never happen");
+      /* nothing to do here */
     }
+  }
 }
 
 void Light::setInputTypeSimpleHeatTempSensor() {
-  inputType = DIGITOUT_SWITCH_HEAT_TEMP_SENSOR;
+  if (this->type == DIGITOUT_SIMPLE_HEAT) {
+    inputType = DIGITOUT_SWITCH_HEAT_TEMP_SENSOR;
+  }
+}
+
+unsigned long Light::getCounterAndReset() {
+  unsigned long reportCounter;
+  reportCounter = counter;
+  counter = 0;
+  return reportCounter;
 }
 
 byte Light::getInputType() {

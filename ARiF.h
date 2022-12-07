@@ -111,6 +111,7 @@
 #define _MTYPE_LIGHT_STATUS_OFF   3
 #define _MTYPE_LIGHT_STATUS_ON_USER  4
 #define _MTYPE_LIGHT_STATUS_OFF_USER 5
+#define _MTYPE_LIGHT_STATUS_INT_VALUE 6
 
 class ARiFClass {
   /* types definitions */
@@ -275,6 +276,9 @@ class ARiFClass {
 
     /* compares two IP addresses. Returns true if they are the same IP, otherwise returns false */
     static bool compareIP(IPAddress ip1, IPAddress ip2);
+
+    /* add the URL preamble into the system */
+    static void addPreamble(byte devID);
     
   public:
 
@@ -365,14 +369,8 @@ class ARiFClass {
     /* send shade position timer */
     static void sendShadeSettings(byte devID, int positionTimer, int tiltTimer);
 
-    /* send light Type */
-    static void sendLightType(byte devID, byte value);
-
-    /* send light input type  */
-    static void sendLightInputType(byte devID, byte value);
-
     /* send a generic message to the raspy */
-    static void sendMessage(byte devID, byte messageType, byte value);
+    static void sendMessage(byte devID, byte messageType, unsigned int value);
 
     /* deregister this arduino */
     static void deregister();
@@ -403,6 +401,12 @@ class ARiFClass {
 
     /* print MAC address in XX:XX:XX... format */
     static void printMAC(const byte *mac);
+
+    /* send counter value */
+    static void sendCounter(byte devID, unsigned int counter);
+
+    /* returns true if ARiF is in connected state */
+    static bool isARiFConnected();
 };
 
 extern ARiFClass ARiF;
