@@ -764,11 +764,25 @@ void ARiFClass::deregister() {
 }
 
 static void ARiFClass::sendTempStatus(byte devID, float value) {
+  sendFloatStatus(devID, _MTYPE_TEMP, value);
+}
+
+static void ARiFClass::sendHumidityStatus(byte devID, float value) {
+  sendFloatStatus(devID, _MTYPE_HUMIDITY, value);
+}
+
+static void ARiFClass::sendFloatStatus(byte devID, byte messageType, float value) {
   if (!isConnected) return;  // exit function if the link is dead;
   if (ARiFClient.connect(ARiFClass::raspyIP, ARiF_HTTP_PORT)) {
 
     addPreamble(devID);
-    ARiFClient.print("&cmd=status&devType=temp&dataType=float&value=");
+    ARiFClient.print("&cmd=status&devType=");
+    if (messageType == _MTYPE_TEMP) {
+      ARiFClient.print("temp");
+    } else if (messageType == _MTYPE_HUMIDITY) {
+      ARiFClient.print("humidity");
+    }
+    ARiFClient.print("&dataType=float&value=");
     ARiFClient.println(value);
 
     ARiFClient.println("Host: raspy");

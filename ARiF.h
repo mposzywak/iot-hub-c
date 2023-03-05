@@ -104,7 +104,7 @@
 #define ARIF_RESTORE_DISABLED 0
 #define ARIF_RESTORE_ENABLED  1
 
-/* INTERNAL sendMessage() messageTypes */
+/* INTERNAL sendMessage() and sendFloatStatus() messageTypes */
 #define _MTYPE_LIGHT_TYPE         0
 #define _MTYPE_LIGHT_INPUT_TYPE   1
 #define _MTYPE_LIGHT_STATUS_ON    2
@@ -112,6 +112,8 @@
 #define _MTYPE_LIGHT_STATUS_ON_USER  4
 #define _MTYPE_LIGHT_STATUS_OFF_USER 5
 #define _MTYPE_LIGHT_STATUS_INT_VALUE 6
+#define _MTYPE_TEMP      7
+#define _MTYPE_HUMIDITY  8
 
 class ARiFClass {
   /* types definitions */
@@ -390,8 +392,14 @@ class ARiFClass {
     /* send the light OFF status message with a physical input triggered indication */
     static void ARiFClass::sendUserLightOFF(byte devID);
 
+    /* send a generic type of device status that reports float (like humidity or temp) */
+    static void ARiFClass::sendFloatStatus(byte devID, byte messageType, float value);
+
     /* send the temperature value */
     static void ARiFClass::sendTempStatus(byte devID, float value);
+
+    /* send the humidity value */
+    static void ARiFClass::sendHumidityStatus(byte devID, float value);
 
     /* set the arduino mode */
     static void ARiFClass::setMode(byte m);

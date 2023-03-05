@@ -11,10 +11,11 @@
 #include "WebGUI.h"
 #include "Light.h"
 #include "Wire.h"
+#include "RS485.h"
 
 /*
 
-  CONTROLLINO - smarthouse test, Version BarnGA-0.4
+  CONTROLLINO/Arduino based smarthouse and industry low-level control platform.
 
   Used to control outputs by inputs and provide a REST-like API over network to that system.
 
@@ -22,6 +23,7 @@
 
   v1.3.0
     - Added counter based inputs
+    - Added RS485 humidity and temperature sensor.
 
   v1.2.2
     - Fixed raspy IP change through HB message from a new IP.
@@ -219,8 +221,13 @@ void setup() {
     ARiF.setCtrlON(ARIF_CTRLON_DISABLED);
   }
 
+  /* initialize 1-Wire sensors */
   Wire.begin();
 
+  /* initialize RS485 sensors */
+  RS485.begin();
+
+  /* initilize the webUI */
   WebGUI.begin();
 
   Serial.println(F("Setup complete!"));
@@ -700,6 +707,9 @@ void loop() {
 
   }
 
+  /* universal float var for 1-Wire and RS485 data */
+  float floatValue;
+
   /*
     -----------------------------------
     --- Handling of oneWire actions ---
@@ -707,18 +717,35 @@ void loop() {
   */
 
   Wire.update();
-  float tempValue;
+  
   byte deviceCount = Wire.getDeviceCount();
   for (byte i = 0; i < deviceCount; i++) {
     if (!Wire.isTemperatureRead(40 + i)) {
-      tempValue = Wire.getTemperature(40 + i);
-      ARiF.sendTempStatus(40 + i, tempValue);
+      floatValue = Wire.getTemperature(40 + i);
+      ARiF.sendTempStatus(40 + i, floatValue);
     }
   }
-  /*if (!Wire.isTemperatureRead(40)) {
-    tempValue = Wire.getTemperature(40);
-    ARiF.sendTempStatus(40, tempValue);
-    }*/
+
+  /*
+     ---------------------------------
+     --- Handling of RS485 actions ---
+     ---------------------------------
+  */
+
+  RS485.update();
+  if (!RS485.isTemperatureRead(50)) {
+    floatValue = RS485.getTemperature(50);
+    Serial.print("Temp: ");
+    Serial.println(floatValue);
+    ARiF.sendTempStatus(50, floatValue);
+  }
+
+  if (!RS485.isHumidityRead(51)) {
+    floatValue = RS485.getHumidity(51);
+    Serial.print("Humidity: ");
+    Serial.println(floatValue);
+    ARiF.sendHumidityStatus(51, floatValue);
+  }
 
   /* -- measurement code start -- */
   uint16_t finish = TCNT1;
@@ -730,6 +757,7 @@ void loop() {
   }
   /* -- measurement code end -- */
 }
+
 
 /*
    -----------------
